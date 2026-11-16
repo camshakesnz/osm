@@ -47,6 +47,14 @@ jobs:
           type qmake.log
           findstr /C:"Add ASIO driver Support" qmake.log || (echo ASIO SDK was not picked up & exit /b 1)
           nmake
+      - name: Show Makefile on failure
+        if: failure()
+        shell: bash
+        run: |
+          for f in build/Makefile build/Makefile.Release; do
+            echo "=== $f"; [ -f "$f" ] && sed -n '960,990p' "$f" | cat -A | cut -c1-300
+          done
+          grep -n "asiosdk" build/Makefile.Release | head -40 || true
       - name: Bundle Qt
         shell: cmd
         run: windeployqt --release --compiler-runtime --qmldir qml build\release\OpenSoundMeter.exe
