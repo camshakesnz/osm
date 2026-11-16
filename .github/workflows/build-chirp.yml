@@ -37,6 +37,12 @@ jobs:
           test -f "$root/host/pc/asiolist.cpp"
           rm -rf ../asiosdk
           cp -r "$root" ../asiosdk
+          # asiolist.cpp is written against the ANSI Win32 API (RegOpenKey,
+          # CharLowerBuff with char*); Qt builds define UNICODE, so compile that
+          # one file without it
+          printf '#undef UNICODE\n#undef _UNICODE\n' | cat - ../asiosdk/host/pc/asiolist.cpp > asiolist.tmp
+          mv asiolist.tmp ../asiosdk/host/pc/asiolist.cpp
+          head -3 ../asiosdk/host/pc/asiolist.cpp
           ls ../asiosdk
       - name: Build
         shell: cmd
