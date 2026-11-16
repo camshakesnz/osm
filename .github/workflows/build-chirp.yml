@@ -22,12 +22,30 @@ jobs:
           version: '5.15.2'
           arch: 'win64_msvc2019_64'
       - uses: ilammy/msvc-dev-cmd@v1
+      # OSM builds ASIO support only when the Steinberg ASIO SDK sits next to the
+      # source as ../asiosdk (with common/, host/, host/pc/). Without it the build
+      # quietly falls back to WASAPI only.
+      - name: Fetch Steinberg ASIO SDK
+        shell: bash
+        run: |
+          curl -sSL --retry 3 -o "$RUNNER_TEMP/asiosdk.zip" https://www.steinberg.net/asiosdk
+          mkdir -p "$RUNNER_TEMP/asiosdk-unzip"
+          unzip -q "$RUNNER_TEMP/asiosdk.zip" -d "$RUNNER_TEMP/asiosdk-unzip"
+          root=$(dirname "$(find "$RUNNER_TEMP/asiosdk-unzip" -path '*/common/asio.cpp' | head -1)")
+          root=$(dirname "$root")
+          echo "ASIO SDK found at: $root"
+          test -f "$root/host/pc/asiolist.cpp"
+          rm -rf ../asiosdk
+          cp -r "$root" ../asiosdk
+          ls ../asiosdk
       - name: Build
         shell: cmd
         run: |
           mkdir build
           cd build
-          qmake ..\OpenSoundMeter.pro CONFIG+=release
+          qmake ..\OpenSoundMeter.pro CONFIG+=release > qmake.log 2>&1
+          type qmake.log
+          findstr /C:"Add ASIO driver Support" qmake.log || (echo ASIO SDK was not picked up & exit /b 1)
           nmake
       - name: Bundle Qt
         shell: cmd
