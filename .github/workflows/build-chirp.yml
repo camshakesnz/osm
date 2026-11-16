@@ -43,7 +43,7 @@ jobs:
         run: |
           mkdir build
           cd build
-          qmake ..\OpenSoundMeter.pro CONFIG+=release > qmake.log 2>&1
+          qmake ..\OpenSoundMeter.pro CONFIG+=release CONFIG+=no_pvs_studio > qmake.log 2>&1
           type qmake.log
           findstr /C:"Add ASIO driver Support" qmake.log || (echo ASIO SDK was not picked up & exit /b 1)
           nmake

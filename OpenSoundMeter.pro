@@ -608,4 +608,7 @@ pvs_studio.output = true
 pvs_studio.args = --dump-files
 pvs_studio.cxxflags = -std=c++1z
 pvs_studio.sources = $${SOURCES}
-include(PVS-Studio.pri)
+# PVS-Studio adds analysis targets for every source file; it writes invalid
+# nmake rules for sources outside the project tree (e.g. ../asiosdk), so CI
+# builds can turn it off with CONFIG+=no_pvs_studio
+!no_pvs_studio: include(PVS-Studio.pri)
