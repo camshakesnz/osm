@@ -31,7 +31,7 @@ jobs:
           nmake
       - name: Bundle Qt
         shell: cmd
-        run: windeployqt --release --qmldir qml build\release\OpenSoundMeter.exe
+        run: windeployqt --release --compiler-runtime --qmldir qml build\release\OpenSoundMeter.exe
       - name: Remove build objects
         shell: bash
         run: rm -f build/release/*.obj build/release/*.cpp build/release/*.h
@@ -41,7 +41,7 @@ jobs:
           path: build/release
 
   macos:
-    runs-on: macos-13
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
         with:
@@ -56,7 +56,8 @@ jobs:
       - name: Build
         run: |
           mkdir build && cd build
-          qmake ../OpenSoundMeter.pro CONFIG+=release
+          # Qt 5.15.2 for macOS is x86_64 only: build Intel, runs on Apple Silicon via Rosetta
+          qmake ../OpenSoundMeter.pro CONFIG+=release QMAKE_APPLE_DEVICE_ARCHS=x86_64
           make -j3
       - name: Bundle Qt
         run: |
