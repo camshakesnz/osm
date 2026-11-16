@@ -789,8 +789,31 @@ void SourceList::appendItem(const Shared::Source &item, bool autocolor)
         item->setColor(nextColor());
     }
     m_items.append(item);
+    if (m_storeChirpSets) {
+        connectChirpStore(item);
+    }
     emit postItemAppended(item);
     emit countChanged();
+}
+
+void SourceList::setStoreChirpSets(bool enable)
+{
+    m_storeChirpSets = enable;
+}
+
+void SourceList::connectChirpStore(const Shared::Source &item)
+{
+    auto measurement = std::dynamic_pointer_cast<Measurement>(item);
+    if (!measurement) {
+        return;
+    }
+    const QUuid uuid = item->uuid();
+    // emitted from the measurement's timer thread, runs here in the list's thread
+    connect(measurement.get(), &Measurement::chirpSetComplete, this, [this, uuid]() {
+        if (auto source = getByUUid(uuid)) {
+            storeItem(source);
+        }
+    }, Qt::QueuedConnection);
 }
 
 void SourceList::takeItem(Shared::Source item)
@@ -808,6 +831,9 @@ void SourceList::removeItem(const Shared::Source &item, bool deleteItem)
     for (int i = 0; i < m_items.size(); ++i) {
         if (m_items.at(i) == item) {
             auto item = get_ref(i);
+            if (auto measurement = std::dynamic_pointer_cast<Measurement>(item)) {
+                disconnect(measurement.get(), &Measurement::chirpSetComplete, this, nullptr);
+            }
             emit preItemRemoved(item.uuid());
             m_items.replace(i, Shared::Source{});
             m_items.removeAt(i);

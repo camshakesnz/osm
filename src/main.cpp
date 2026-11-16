@@ -89,6 +89,7 @@ int main(int argc, char *argv[])
     audio::Client::getInstance();
     auto generator = std::make_shared<Generator>(settings.getGroup("generator"));
     Shared::SourceList sourceList = std::make_shared<SourceList>();
+    sourceList->setStoreChirpSets(true);
     AutoSaver autoSaver(settings.getGroup("autosaver"), sourceList);
     auto t = new TargetTrace(settings.getGroup("targettrace"));
     auto notifier = Notifier::getInstance();

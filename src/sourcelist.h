@@ -134,6 +134,10 @@ public slots:
     Q_INVOKABLE void cloneItem(const Shared::Source &item);
     Q_INVOKABLE void storeItem(const Shared::Source &item);
 
+    //! store a measurement's result when its chirp set finishes (owning lists only,
+    //! not the mirrored copies used by charts, or every result would be stored twice)
+    void setStoreChirpSets(bool enable);
+
     int appendNone();
     int appendAll();
 
@@ -155,6 +159,9 @@ signals:
     void countChanged();
 
 private:
+    void connectChirpStore(const Shared::Source &item);
+    bool m_storeChirpSets = false;
+
     bool loadList(const QJsonDocument &document, const QUrl &fileName) noexcept;
     template<typename T> bool loadObject(const QJsonObject &data, const SourceList *topList);
     template<typename T, typename... Ts> Shared::Source add(Ts...);

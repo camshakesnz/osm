@@ -63,7 +63,7 @@ Item {
                 ToolTip.visible: hovered
                 ToolTip.text: qsTr("average count")
 
-                visible: dataObjectData.averageType === Measurement.FIFO;
+                visible: !isChirp && dataObjectData.averageType === Measurement.FIFO;
             }
 
             DropDown {
@@ -75,12 +75,22 @@ Item {
                 ToolTip.visible: hovered
                 ToolTip.text: qsTr("LPF frequency")
 
-                visible: dataObjectData.averageType === Measurement.LPF;
+                visible: !isChirp && dataObjectData.averageType === Measurement.LPF;
             }
 
             Rectangle {
                 Layout.preferredWidth: elementWidth
-                visible: dataObjectData.averageType === Measurement.OFF;
+                visible: !isChirp && dataObjectData.averageType === Measurement.OFF;
+            }
+
+            CheckBox {
+                text: qsTr("auto store")
+                visible: isChirp && dataObjectData.chirpAutoStore !== undefined
+                checked: dataObjectData.chirpAutoStore === true
+                onCheckedChanged: if (dataObjectData.chirpAutoStore !== undefined) dataObjectData.chirpAutoStore = checked
+                Layout.preferredWidth: elementWidth
+                ToolTip.visible: hovered
+                ToolTip.text: qsTr("store the result automatically when a chirp set finishes")
             }
 
             Button {

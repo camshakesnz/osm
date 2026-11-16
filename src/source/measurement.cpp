@@ -148,6 +148,7 @@ QJsonObject Measurement::toJSON() const noexcept
     data["polarity"]        = polarity();
     data["deviceName"]      = deviceName();
     data["mode"]            = mode();
+    data["chirpAutoStore"]  = chirpAutoStore();
     data["inputFilters"]    = static_cast<int>(inputFilter());
 
     QJsonObject calibration;
@@ -183,6 +184,7 @@ void Measurement::fromJSON(QJsonObject data, const SourceList *list) noexcept
     setReferenceChanel(  castUInt(data["referenceChanel" ], referenceChanel()));
 
     setMode(             data["mode"             ].toInt(mode()));
+    setChirpAutoStore(   data["chirpAutoStore"   ].toBool(chirpAutoStore()));
     setAverageType(      data["averageType"      ].toInt(averageType()));
     setFiltersFrequency( data["filtersFrequency" ].toInt(filtersFrequency()));
     setWindowFunctionType(data["window.type"     ].toInt(m_windowFunctionType));
@@ -718,6 +720,10 @@ Shared::Source Measurement::store()
     case LFT:
         modeNote = "FT log time window";
         break;
+    case Chirp:
+    case ChirpLTW:
+        modeNote = modeName() + QString(", %1 of %2 chirps").arg(m_chirp.captured()).arg(m_chirp.count());
+        break;
     default:
         modeNote = "FFT power " + modeName();
     }
@@ -732,8 +738,9 @@ Shared::Source Measurement::store()
         QString(" M: %1").arg(dataChanel() + 1) +
         (polarity() ? " polarity inversed" : "") +
         (calibration() ? " calibrated" : "") + " \n" +
-        "Window: " + WindowFunction::name(m_windowFunctionType) + "\t" +
-        "Average: " + avg + "\n" +
+        (chirpMode() ? QString("Gate: from first arrival") :
+                       "Window: " + WindowFunction::name(m_windowFunctionType)) + "\t" +
+        "Average: " + (chirpMode() ? QString("coherent over chirps") : avg) + "\n" +
         "Date: " + QDateTime::currentDateTime().toString()
 
     );
@@ -746,6 +753,7 @@ Shared::Source Measurement::clone() const
 
     cloned->setActive(false);
     cloned->setMode(mode());
+    cloned->setChirpAutoStore(chirpAutoStore());
     cloned->setAverageType(averageType());
     cloned->setAverage(average());
     cloned->setFiltersFrequency(filtersFrequency());
@@ -1028,6 +1036,18 @@ void Measurement::armChirp() noexcept
     m_chirpArmRequest.store(true);
 }
 
+bool Measurement::chirpAutoStore() const noexcept
+{
+    return m_chirpAutoStore.load();
+}
+
+void Measurement::setChirpAutoStore(bool autoStore)
+{
+    if (m_chirpAutoStore.exchange(autoStore) != autoStore) {
+        emit chirpAutoStoreChanged(autoStore);
+    }
+}
+
 QString Measurement::chirpStatus() const
 {
     std::lock_guard<std::mutex> guard(m_chirpStatusMutex);
@@ -1149,6 +1169,9 @@ void Measurement::transformChirp()
         unlock();
         emit readyRead();
         emit estimatedChanged();
+        if (m_chirp.state() == ChirpAnalyzer::State::Complete && m_chirpAutoStore.load()) {
+            emit chirpSetComplete();
+        }
     }
     updateChirpStatus();
     emit levelChanged();

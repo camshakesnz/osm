@@ -29,6 +29,7 @@ Group::Group(QObject *parent)
     setObjectName("Group");
     setName("Group");
     setActive(true);
+    m_sourceList.setStoreChirpSets(true);
 
     connect(&m_sourceList, &SourceList::preItemAppended, this, &Group::sizeChanged);
     connect(&m_sourceList, &SourceList::preItemRemoved, this, &Group::sizeChanged);

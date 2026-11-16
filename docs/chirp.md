@@ -13,7 +13,10 @@ fire a set, look at the result, change the DSP, fire again.
 3. Switch the generator **on**. It plays the set and **switches itself off** when it's done.
    The measurement panel shows the progress (*waiting… / capturing 2/3 / done 3/3*), and
    the trace updates after every chirp.
-4. **Store** the result, change the DSP, and fire again to verify.
+4. With **auto store** ticked (the default, on the measurement panel in chirp modes), the
+   result is stored as a trace when the set finishes, named with the time
+   (e.g. *Measurement @ 18:05*). Untick it to store by hand. Change the DSP and fire again
+   to verify.
 
 Resetting the average (or clicking the status text) gets ready for a new set without
 replaying the generator, for example when the chirps come from somewhere else.

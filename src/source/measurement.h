@@ -89,6 +89,8 @@ class Measurement : public Abstract::Source, public Meta::Measurement
     //chirp modes: progress of the current set, e.g. "chirp 2/3"
     Q_PROPERTY(QString chirpStatus READ chirpStatus NOTIFY chirpStatusChanged)
     Q_PROPERTY(bool chirpMode READ chirpMode NOTIFY modeChanged)
+    //chirp modes: store the result automatically when a set finishes
+    Q_PROPERTY(bool chirpAutoStore READ chirpAutoStore WRITE setChirpAutoStore NOTIFY chirpAutoStoreChanged)
 
 public:
     explicit Measurement(QObject *parent = nullptr);
@@ -129,6 +131,8 @@ public:
     Q_INVOKABLE void applyAutoGain(const float reference) override;
 
     bool chirpMode() const noexcept;
+    bool chirpAutoStore() const noexcept;
+    void setChirpAutoStore(bool autoStore);
     QString chirpStatus() const;
     //! wait for a new chirp set (also called when the chirp generator starts)
     Q_INVOKABLE void armChirp() noexcept;
@@ -205,6 +209,7 @@ private:
     std::atomic<long> m_chirpEstimate {0};
     std::vector<std::pair<float, float>> m_chirpInput;
     QString m_chirpStatus;
+    std::atomic<bool> m_chirpAutoStore {true};
     mutable std::mutex m_chirpStatusMutex;
 
     bool m_enableCalibration, m_calibrationLoaded;
@@ -229,6 +234,9 @@ signals:
     void calibrationChanged(bool);
     void calibrationLoadedChanged(bool);
     void chirpStatusChanged();
+    void chirpAutoStoreChanged(bool);
+    //! a chirp set has finished and auto store is on
+    void chirpSetComplete();
 
     void polarityChanged(bool) override;
     void gainChanged(float) override;
