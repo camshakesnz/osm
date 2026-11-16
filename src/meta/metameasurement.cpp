@@ -27,7 +27,9 @@ const std::map<Measurement::Mode, QString>Measurement::m_modeMap = {
     {Measurement::FFT14, "14"},
     {Measurement::FFT15, "15"},
     {Measurement::FFT16, "16"},
-    {Measurement::LFT,   "LTW"}
+    {Measurement::LFT,   "LTW"},
+    {Measurement::Chirp,    "Chirp"},
+    {Measurement::ChirpLTW, "Chirp LTW"}
 };
 const std::map<Measurement::InputFilter, QString>Measurement::m_inputFilterMap = {
     {Measurement::InputFilter::Z,     "Z"},
@@ -44,7 +46,11 @@ const std::map<Measurement::Mode, int>Measurement::m_FFTsizes = {
     {Measurement::FFT13, 13},
     {Measurement::FFT14, 14},
     {Measurement::FFT15, 15},
-    {Measurement::FFT16, 16}
+    {Measurement::FFT16, 16},
+    // chirp modes size themselves from the chirp settings; other sources
+    // (filters, standard lines) that follow a measurement's mode use FFT 16
+    {Measurement::Chirp, 16},
+    {Measurement::ChirpLTW, 16}
 };
 
 Measurement::Measurement() : Base(),

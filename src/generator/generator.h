@@ -50,6 +50,8 @@ class Generator : public QObject
     //Gain
     Q_PROPERTY(float gain READ gain WRITE setGain NOTIFY gainChanged)
     Q_PROPERTY(float duration READ duration WRITE setDuration NOTIFY durationChanged)
+    //number of chirps in a set, 1..6
+    Q_PROPERTY(int chirpCount READ chirpCount WRITE setChirpCount NOTIFY chirpCountChanged)
 
     Q_PROPERTY(QSet<int> channels READ channels WRITE setChannels NOTIFY channelsChanged)
 
@@ -109,6 +111,9 @@ public:
     float duration() const;
     void setDuration(float duration);
 
+    int chirpCount() const;
+    void setChirpCount(int count);
+
     audio::DeviceInfo::Id deviceId() const;
     void setDeviceId(const audio::DeviceInfo::Id &deviceId);
 
@@ -129,6 +134,7 @@ signals:
     void endFrequencyChanged(int f);
     void gainChanged(float);
     void durationChanged(float);
+    void chirpCountChanged(int);
     void deviceIdChanged(audio::DeviceInfo::Id);
     void channelsChanged(QSet<int>);
     void channelsChangedQList(QList<QVariant>);

@@ -33,6 +33,7 @@ Item {
     readonly property int elementWidth: width / 9
     readonly property int spinboxWidth: width / 14
     readonly property bool isLocal : dataObjectData.objectName === "Measurement"
+    readonly property bool isChirp : dataObjectData.mode === Measurement.Chirp || dataObjectData.mode === Measurement.ChirpLTW
 
     ColumnLayout {
         spacing: 0
@@ -45,8 +46,9 @@ Item {
                 Layout.preferredWidth: elementWidth
                 model: ["off", "LPF", "FIFO"]
                 currentIndex: dataObjectData.averageType
+                enabled: !isChirp
                 ToolTip.visible: hovered
-                ToolTip.text: qsTr("average type")
+                ToolTip.text: isChirp ? qsTr("chirp modes average the chirps of a set (generator: chirp count)") : qsTr("average type")
                 onCurrentIndexChanged: dataObjectData.averageType = currentIndex;
             }
 
@@ -292,15 +294,33 @@ Item {
                 id: modeSelect
                 model: dataObjectData.modes
                 currentIndex: dataObjectData.mode
-                displayText: (dataObjectData.mode === Measurement.LFT ? "LTW" : (modeSelect.width > 120 ? "Power:" : "") + currentText)
+                displayText: (dataObjectData.mode === Measurement.LFT ? "LTW" : (isChirp ? currentText : (modeSelect.width > 120 ? "Power:" : "") + currentText))
                 ToolTip.visible: hovered
                 ToolTip.text: qsTr("Transfrom mode")
                 onCurrentIndexChanged: dataObjectData.mode = currentIndex;
                 Layout.preferredWidth: elementWidth
             }
 
+            Label {
+                id: chirpStatusLabel
+                visible: isChirp
+                text: dataObjectData.chirpStatus !== undefined && dataObjectData.chirpStatus !== "" ? dataObjectData.chirpStatus : qsTr("chirp: start generator")
+                horizontalAlignment: Text.AlignHCenter
+                elide: Text.ElideRight
+                Layout.preferredWidth: elementWidth
+                ToolTip.visible: chirpStatusMouse.containsMouse
+                ToolTip.text: qsTr("Chirp set progress. Starting the Chirp generator (or resetting average) starts a new set.")
+                MouseArea {
+                    id: chirpStatusMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    onClicked: if (isLocal) dataObjectData.armChirp()
+                }
+            }
+
             DropDown {
                 id: windowSelect
+                visible: !isChirp
                 model: dataObjectData.windows
                 currentIndex: dataObjectData.window
                 onCurrentIndexChanged: dataObjectData.window = currentIndex

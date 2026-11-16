@@ -31,6 +31,8 @@
 #include "mlsplus.h"
 #include "brownnoise.h"
 #include "sinburst.h"
+#include "chirp.h"
+#include "math/chirpsignal.h"
 
 GeneratorThread *GeneratorThread::s_instance = nullptr;
 
@@ -41,6 +43,7 @@ GeneratorThread::GeneratorThread(QObject *parent) :
     m_sources(),
     m_gain(-6.f), m_duration(1.f),
     m_type(0),
+    m_chirpCount(3),
     m_frequency(1000),
     m_startFrequency(20),
     m_endFrequency(20000),
@@ -100,6 +103,25 @@ void GeneratorThread::setDuration(float duration)
     }
 }
 
+bool GeneratorThread::isChirp() const
+{
+    return m_type >= 0 && m_type < m_sources.size() && qobject_cast<Chirp *>(m_sources[m_type]) != nullptr;
+}
+
+int GeneratorThread::chirpCount() const
+{
+    return m_chirpCount;
+}
+
+void GeneratorThread::setChirpCount(int count)
+{
+    count = static_cast<int>(chirp::clampCount(count));
+    if (m_chirpCount != count) {
+        m_chirpCount = count;
+        emit chirpCountChanged(m_chirpCount);
+    }
+}
+
 void GeneratorThread::init()
 {
     m_sources << new PinkNoise(this);
@@ -111,6 +133,14 @@ void GeneratorThread::init()
     m_sources << new MLSPlus(this);
     m_sources << new BrownNoise(this);
     m_sources << new SinBurst(this);
+
+    // a chirp set switches the generator off when it is done, so it can be
+    // fired from a remote with a single tap
+    auto chirpSource = new Chirp(this);
+    connect(chirpSource, &Chirp::sequenceFinished, this, [this]() {
+        setEnabled(false);
+    }, Qt::QueuedConnection);
+    m_sources << chirpSource;
 
     for (auto &source : m_sources) {
         connect(source, &OutputDevice::sampleError, this, &GeneratorThread::deviceError);

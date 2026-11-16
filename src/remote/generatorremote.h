@@ -39,6 +39,7 @@ class GeneratorRemote : public QObject
     Q_PROPERTY(int endFrequency READ endFrequency WRITE setEndFrequency NOTIFY endFrequencyChanged)
     Q_PROPERTY(float gain READ gain WRITE setGain NOTIFY gainChanged)
     Q_PROPERTY(float duration READ duration WRITE setDuration NOTIFY durationChanged)
+    Q_PROPERTY(int chirpCount READ chirpCount WRITE setChirpCount NOTIFY chirpCountChanged)
 
 public:
     GeneratorRemote(QObject *parent = nullptr);
@@ -70,6 +71,9 @@ public:
     float duration() const;
     void setDuration(float newDuration);
 
+    int chirpCount() const;
+    void setChirpCount(int count);
+
     QUuid serverId() const;
     void setServerId(const QUuid &newServerId);
 
@@ -98,6 +102,7 @@ signals:
     void endFrequencyChanged();
     void gainChanged();
     void durationChanged();
+    void chirpCountChanged();
     void hostChanged();
     void stateChanged();
 
@@ -116,6 +121,7 @@ private:
     int   m_endFrequency;
     float m_gain;
     float m_duration;
+    int m_chirpCount = 3;
 
     bool m_eventSilence;
     QUuid m_serverId, m_sourceId;

@@ -70,6 +70,7 @@ SOURCES += src/main.cpp \
     src/generator/mlsplus.cpp \
     src/generator/musicnoise.cpp \
     src/generator/sinburst.cpp \
+    src/generator/chirp.cpp \
     src/generator/wav.cpp \
     src/generator/mnoise.cpp \
     \
@@ -95,6 +96,7 @@ SOURCES += src/main.cpp \
     src/math/fouriertransform.cpp \
     src/math/windowfunction.cpp \
     src/math/deconvolution.cpp \
+    src/math/chirpanalyzer.cpp \
     \
     src/meta/metabase.cpp \
     src/meta/metafilter.cpp \
@@ -208,6 +210,7 @@ HEADERS += \
     src/generator/mlsplus.h \
     src/generator/musicnoise.h \
     src/generator/sinburst.h \
+    src/generator/chirp.h \
     src/generator/wav.h \
     src/inputdevice.h \
     src/common/appearance.h \
@@ -276,6 +279,8 @@ HEADERS += \
     src/math/complex.h \
     src/math/fouriertransform.h \
     src/math/deconvolution.h \
+    src/math/chirpanalyzer.h \
+    src/math/chirpsignal.h \
     src/math/windowfunction.h \
     src/math/deconvolution.h \
     src/container/fifo.h \

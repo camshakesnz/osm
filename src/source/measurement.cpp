@@ -28,6 +28,7 @@
 #include "math/notch.h"
 #include "math/bandpass.h"
 #include "math/lowpassfilter.h"
+#include "generator/generatorthread.h"
 
 Measurement::Measurement(QObject *parent) : Abstract::Source(parent), Meta::Measurement(),
     m_timer(nullptr), m_timerThread(nullptr),
@@ -102,6 +103,13 @@ Measurement::Measurement(QObject *parent) : Abstract::Source(parent), Meta::Meas
             Qt::DirectConnection);
     connect(GeneratorThread::getInstance(), &GeneratorThread::enabledChanged, this, &Measurement::resetLoopBuffer,
             Qt::DirectConnection);
+    // starting the chirp generator starts a new chirp set
+    connect(GeneratorThread::getInstance(), &GeneratorThread::enabledChanged, this, [this](bool enabled) {
+        auto generator = GeneratorThread::getInstance();
+        if (enabled && generator && generator->isChirp()) {
+            armChirp();
+        }
+    }, Qt::DirectConnection);
 
     auto refreshDelays = [this]() {
         m_resetDelay = true;
@@ -240,6 +248,14 @@ void Measurement::updateFftPower()
     m_currentMode = m_mode;
 
     switch (m_currentMode) {
+    case Mode::Chirp:
+    case Mode::ChirpLTW:
+        // the classic path keeps a small FFT ready; sizes come from the chirp set
+        m_dataFT.setSize(pow(2, m_FFTsizes.at(FFT12)));
+        m_dataFT.setType(FourierTransform::Fast);
+        startChirpSet();
+        return;
+
     case Mode::LFT:
         m_dataFT.setType(FourierTransform::Log);
         setTimeDomainSize(pow(2, m_FFTsizes.at(FFT12)));
@@ -343,6 +359,9 @@ void Measurement::onSampleRateChanged()
         calculateDataLength();
         updateFilterFrequency();
         applyInputFilters();
+        if (chirpMode()) {
+            armChirp();
+        }
     }
 }
 audio::DeviceInfo::Id Measurement::deviceId() const
@@ -376,6 +395,23 @@ void Measurement::applyAutoGain(const float reference)
 
 void Measurement::calculateDataLength()
 {
+    if (chirpMode()) {
+        const auto &spectrum = m_chirp.spectrum();
+        setFrequencyDomainSize(static_cast<unsigned int>(spectrum.size()));
+        for (size_t i = 0; i < spectrum.size(); ++i) {
+            m_ftdata[i] = {};
+            m_ftdata[i].frequency = spectrum[i].frequency;
+        }
+        setTimeDomainSize(static_cast<unsigned int>(m_chirp.impulse().size()));
+        const float kt = 1000.f / sampleRate();
+        const long half = static_cast<long>(timeDomainSize() / 2) - 1;
+        for (unsigned int j = 0; j < timeDomainSize(); ++j) {
+            m_impulseData[j].time = (static_cast<long>(j) - half) * kt;
+            m_impulseData[j].value = 0;
+        }
+        applyCalibration();
+        return;
+    }
     auto frequencyList = m_dataFT.getFrequencies();
     setFrequencyDomainSize(frequencyList.size());
     unsigned int i = 0;
@@ -516,6 +552,11 @@ void Measurement::transform()
 {
     if (!active() || m_error)
         return;
+
+    if (m_mode == Mode::Chirp || m_mode == Mode::ChirpLTW || chirpMode()) {
+        transformChirp();
+        return;
+    }
 
     lock();
     updateFftPower();
@@ -729,6 +770,9 @@ Shared::Source Measurement::clone() const
 }
 long Measurement::estimated() const noexcept
 {
+    if (chirpMode()) {
+        return m_chirpEstimate.load() + static_cast<long>(m_workingDelay);
+    }
     if (m_estimatedDelay > m_delayFinder.size() / 2) {
         return m_estimatedDelay - m_delayFinder.size() + static_cast<long>(m_workingDelay);
     }
@@ -736,6 +780,9 @@ long Measurement::estimated() const noexcept
 }
 long Measurement::estimatedDelta() const noexcept
 {
+    if (chirpMode()) {
+        return m_chirpEstimate.load();
+    }
     if (m_estimatedDelay > m_delayFinder.size() / 2) {
         return m_estimatedDelay - m_delayFinder.size();
     }
@@ -897,6 +944,10 @@ void Measurement::destroy()
 }
 void Measurement::resetAverage() noexcept
 {
+    if (chirpMode()) {
+        armChirp();
+        return;
+    }
     auto reset = [](auto * f) {
         f->reset();
     };
@@ -963,4 +1014,143 @@ void Measurement::Meters::reset()
         meter.second.reset();
     }
     m_reference.reset();
+}
+
+// ---------------------------------------------------------------- chirp modes
+
+bool Measurement::chirpMode() const noexcept
+{
+    return m_currentMode == Mode::Chirp || m_currentMode == Mode::ChirpLTW;
+}
+
+void Measurement::armChirp() noexcept
+{
+    m_chirpArmRequest.store(true);
+}
+
+QString Measurement::chirpStatus() const
+{
+    std::lock_guard<std::mutex> guard(m_chirpStatusMutex);
+    return m_chirpStatus;
+}
+
+//! called from the timer thread with the data lock held
+void Measurement::startChirpSet()
+{
+    chirp::Params params;
+    params.sampleRate = sampleRate();
+    if (auto generator = GeneratorThread::getInstance()) {
+        params.startFrequency = generator->startFrequency();
+        params.endFrequency = generator->endFrequency();
+        params.sweepDuration = generator->duration();
+        params.count = static_cast<unsigned int>(generator->chirpCount());
+    }
+    m_chirp.arm(params, m_currentMode == Mode::ChirpLTW ? ChirpAnalyzer::Gate::Log : ChirpAnalyzer::Gate::Fixed);
+    m_chirpEstimate.store(0);
+    calculateDataLength();
+    updateChirpStatus();
+}
+
+void Measurement::updateChirpStatus()
+{
+    QString status;
+    const unsigned int done = m_chirp.captured(), total = m_chirp.count();
+    switch (m_chirp.state()) {
+    case ChirpAnalyzer::State::Idle:
+        break;
+    case ChirpAnalyzer::State::Armed:
+        status = done ? QString("chirp %1/%2 done, waiting").arg(done).arg(total)
+                      : QString("waiting for chirp 1/%1").arg(total);
+        break;
+    case ChirpAnalyzer::State::Capturing:
+        status = QString("capturing %1/%2").arg(done + 1).arg(total);
+        break;
+    case ChirpAnalyzer::State::Complete:
+        status = QString("done %1/%2").arg(done).arg(total);
+        break;
+    }
+    bool changed = false;
+    {
+        std::lock_guard<std::mutex> guard(m_chirpStatusMutex);
+        if (status != m_chirpStatus) {
+            m_chirpStatus = status;
+            changed = true;
+        }
+    }
+    if (changed) {
+        emit chirpStatusChanged();
+    }
+}
+
+/**
+ * Chirp modes: samples are taken from the input buffers under the data lock, the
+ * (occasionally heavy) chirp processing runs without it, and results are copied
+ * back under the lock, so plots never wait for the FFTs.
+ */
+void Measurement::transformChirp()
+{
+    lock();
+    updateFftPower();
+    updateDelay();
+    if (m_chirpArmRequest.exchange(false)) {
+        startChirpSet();
+    }
+
+    auto filterM = m_inputFilters.first;
+    auto filterR = m_inputFilters.second;
+    m_chirpInput.clear();
+    while (m_data.collected() > 0 && m_reference.collected() > 0) {
+        float d = m_data.read();
+        float r = m_reference.read();
+        if (filterM) {
+            d = filterM->operator()(d);
+        }
+        if (filterR) {
+            r = filterR->operator()(r);
+        }
+        m_chirpInput.emplace_back(d, r);
+    }
+    unlock();
+
+    bool updated = false;
+    for (const auto &sample : m_chirpInput) {
+        updated |= m_chirp.add(sample.first, sample.second);
+    }
+
+    if (updated) {
+        lock();
+        const auto &spectrum = m_chirp.spectrum();
+        const bool calibrated = m_enableCalibration && m_calibrationGain.size() >= static_cast<int>(spectrum.size());
+        if (spectrum.size() == frequencyDomainSize()) {
+            for (size_t i = 0; i < spectrum.size(); ++i) {
+                const auto &p = spectrum[i];
+                float magnitude = p.magnitude, module = p.module, phase = p.phase;
+                if (calibrated) {
+                    magnitude /= m_calibrationGain[static_cast<int>(i)];
+                    module /= m_calibrationGain[static_cast<int>(i)];
+                    phase -= m_calibrationPhase[static_cast<int>(i)];
+                }
+                m_ftdata[i].magnitude = magnitude;
+                m_ftdata[i].module = module;
+                m_ftdata[i].phase.polar(phase);
+                m_ftdata[i].coherence = p.coherence;
+                m_ftdata[i].peakSquared = module * module;
+                m_ftdata[i].meanSquared = module * module;
+            }
+        }
+        const auto &impulse = m_chirp.impulse();
+        if (impulse.size() == timeDomainSize()) {
+            for (size_t j = 0; j < impulse.size(); ++j) {
+                m_impulseData[j].value.real = impulse[j];
+                m_impulseData[j].value.imag = 0;
+            }
+        }
+        m_chirpEstimate.store(m_chirp.peakDelay());
+        unlock();
+        emit readyRead();
+        emit estimatedChanged();
+    }
+    updateChirpStatus();
+    emit levelChanged();
+    emit referenceLevelChanged();
 }

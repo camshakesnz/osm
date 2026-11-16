@@ -92,7 +92,7 @@ Item {
             //Sin Sweep from
             FloatSpinBox {
                 //id: sinSweepDuration
-                visible: type.currentText == 'SineSweep';
+                visible: type.currentText == 'SineSweep' || type.currentText == 'Chirp';
                 implicitWidth: 165
                 value: control.currentGenerator.duration
                 from: 0.5
@@ -105,7 +105,7 @@ Item {
             SelectableSpinBox {
                 id: sinSweepStart
                 implicitWidth: 165
-                visible: type.currentText == 'SineSweep';
+                visible: type.currentText == 'SineSweep' || type.currentText == 'Chirp';
                 value: control.currentGenerator.startFrequency
                 from: 20
                 to: sinSweepEnd.value-1
@@ -128,7 +128,7 @@ Item {
             SelectableSpinBox {
                 id: sinSweepEnd
                 implicitWidth: 165
-                visible: type.currentText == 'SineSweep';
+                visible: type.currentText == 'SineSweep' || type.currentText == 'Chirp';
                 value: control.currentGenerator.endFrequency
                 from: sinSweepStart.value+1
                 to: 20000
@@ -145,6 +145,29 @@ Item {
 
                 ToolTip.visible: hovered
                 ToolTip.text: qsTr("End frequency")
+            }
+
+            //number of chirps in a set
+            SelectableSpinBox {
+                id: chirpCount
+                implicitWidth: 165
+                visible: type.currentText == 'Chirp'
+                value: control.currentGenerator.chirpCount !== undefined ? control.currentGenerator.chirpCount : 3
+                from: 1
+                to: 6
+                editable: true
+                onValueChanged: if (control.currentGenerator.chirpCount !== undefined) control.currentGenerator.chirpCount = value
+
+                textFromValue: function(value, locale) {
+                    return Number(value) + (value === 1 ? " chirp" : " chirps")
+                }
+
+                valueFromText: function(text, locale) {
+                    return parseInt(text)
+                }
+
+                ToolTip.visible: hovered
+                ToolTip.text: qsTr("chirps per measurement; the generator switches off when the set is done")
             }
 
             Button {

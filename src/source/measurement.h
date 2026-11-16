@@ -33,6 +33,7 @@
 #include "math/averaging.h"
 #include "math/fouriertransform.h"
 #include "math/deconvolution.h"
+#include "math/chirpanalyzer.h"
 #include "math/bessellpf.h"
 #include "math/coherence.h"
 #include "math/filter.h"
@@ -85,6 +86,10 @@ class Measurement : public Abstract::Source, public Meta::Measurement
 
     Q_PROPERTY(Meta::Measurement::InputFilter inputFilter READ inputFilter WRITE setInputFilter NOTIFY inputFilterChanged)
 
+    //chirp modes: progress of the current set, e.g. "chirp 2/3"
+    Q_PROPERTY(QString chirpStatus READ chirpStatus NOTIFY chirpStatusChanged)
+    Q_PROPERTY(bool chirpMode READ chirpMode NOTIFY modeChanged)
+
 public:
     explicit Measurement(QObject *parent = nullptr);
     ~Measurement() override;
@@ -122,6 +127,11 @@ public:
     void selectDevice(const QString &name);
 
     Q_INVOKABLE void applyAutoGain(const float reference) override;
+
+    bool chirpMode() const noexcept;
+    QString chirpStatus() const;
+    //! wait for a new chirp set (also called when the chirp generator starts)
+    Q_INVOKABLE void armChirp() noexcept;
     Q_INVOKABLE void destroy() override final;
 
 public slots:
@@ -186,6 +196,17 @@ private:
     void calculateDataLength();
     void averaging();
 
+    // chirp modes
+    void transformChirp();
+    void startChirpSet();
+    void updateChirpStatus();
+    ChirpAnalyzer m_chirp;
+    std::atomic<bool> m_chirpArmRequest {false};
+    std::atomic<long> m_chirpEstimate {0};
+    std::vector<std::pair<float, float>> m_chirpInput;
+    QString m_chirpStatus;
+    mutable std::mutex m_chirpStatusMutex;
+
     bool m_enableCalibration, m_calibrationLoaded;
     QList<QVector<float>> m_calibrationList;
     QVector<float> m_calibrationGain;
@@ -207,6 +228,7 @@ signals:
     void errorChanged(bool);
     void calibrationChanged(bool);
     void calibrationLoadedChanged(bool);
+    void chirpStatusChanged();
 
     void polarityChanged(bool) override;
     void gainChanged(float) override;

@@ -83,6 +83,12 @@ public slots:
     float duration() const;
     void setDuration(float duration);
 
+    //! true when the current type is the chirp set
+    bool isChirp() const;
+
+    int chirpCount() const;
+    void setChirpCount(int count);
+
     QSet<int> channels() const;
     void setChannels(const QSet<int> &channels);
 
@@ -97,6 +103,7 @@ signals:
     void endFrequencyChanged(int);
     void gainChanged(float);
     void durationChanged(float);
+    void chirpCountChanged(int);
     void deviceIdChanged(audio::DeviceInfo::Id);
     void deviceError();
     void sampleOut(float);
@@ -116,6 +123,7 @@ private:
 
     float m_gain, m_duration;
     int m_type;
+    int m_chirpCount;
     int m_frequency, m_startFrequency, m_endFrequency;
     bool m_enabled, m_evenPolarity;
 };

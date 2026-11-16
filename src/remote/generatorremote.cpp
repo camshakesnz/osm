@@ -133,6 +133,19 @@ void GeneratorRemote::setDuration(float newDuration)
     emit durationChanged();
 }
 
+int GeneratorRemote::chirpCount() const
+{
+    return m_chirpCount;
+}
+
+void GeneratorRemote::setChirpCount(int count)
+{
+    if (m_chirpCount == count)
+        return;
+    m_chirpCount = count;
+    emit chirpCountChanged();
+}
+
 QUuid GeneratorRemote::serverId() const
 {
     return m_serverId;

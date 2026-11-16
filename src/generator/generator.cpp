@@ -38,6 +38,8 @@ Generator::Generator(Settings *settings, QObject *parent) : QObject(parent),
             Qt::QueuedConnection);
     connect(&m_thread, SIGNAL(durationChanged(float)), this, SIGNAL(durationChanged(float)),
             Qt::QueuedConnection);
+    connect(&m_thread, SIGNAL(chirpCountChanged(int)), this, SIGNAL(chirpCountChanged(int)),
+            Qt::QueuedConnection);
     connect(&m_thread, SIGNAL(channelsChanged(QSet<int>)),   this, SIGNAL(channelsChanged(QSet<int>)),
             Qt::QueuedConnection);
     connect(&m_thread, SIGNAL(deviceIdChanged(audio::DeviceInfo::Id)),  this,
@@ -100,7 +102,19 @@ void Generator::loadSettings()
         setEvenPolarity(m_settings->reactValue<GeneratorThread, bool>(
                             "evenPolarity", &m_thread, &GeneratorThread::evenPolarityChanged, m_thread.evenPolarity()).toBool());
 
-        //@TODO: Add settings for SinSweep parameters
+        setDuration(m_settings->reactValue<GeneratorThread, float>(
+                        "duration", &m_thread, &GeneratorThread::durationChanged, m_thread.duration()).toFloat());
+
+        setStartFrequency(m_settings->reactValue<GeneratorThread, int>(
+                              "startFrequency", &m_thread, &GeneratorThread::startFrequencyChanged,
+                              m_thread.startFrequency()).toInt());
+
+        setEndFrequency(m_settings->reactValue<GeneratorThread, int>(
+                            "endFrequency", &m_thread, &GeneratorThread::endFrequencyChanged,
+                            m_thread.endFrequency()).toInt());
+
+        setChirpCount(m_settings->reactValue<GeneratorThread, int>(
+                          "chirpCount", &m_thread, &GeneratorThread::chirpCountChanged, m_thread.chirpCount()).toInt());
     }
 }
 
@@ -220,5 +234,20 @@ void Generator::setDuration(float duration)
         "setDuration",
         Qt::QueuedConnection,
         Q_ARG(float, duration)
+    );
+}
+
+int Generator::chirpCount() const
+{
+    return m_thread.chirpCount();
+}
+
+void Generator::setChirpCount(int count)
+{
+    QMetaObject::invokeMethod(
+        &m_thread,
+        "setChirpCount",
+        Qt::QueuedConnection,
+        Q_ARG(int, count)
     );
 }

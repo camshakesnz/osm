@@ -1,0 +1,63 @@
+# Chirp measurement
+
+Measure with a set of 1–6 log-sweep chirps instead of continuous noise:
+fire a set, look at the result, change the DSP, fire again.
+
+## Use
+
+1. **Generator** → type **Chirp**. Set the sweep length (default 1 s), start/end
+   frequency (default 20 Hz – 20 kHz) and the number of chirps (1–6).
+   Use the generator gain as usual.
+2. **Measurement** → mode **Chirp** or **Chirp LTW** (the mode list that also holds 10…16 / LTW).
+   Reference and measurement channels work as normal, including the generator loop.
+3. Switch the generator **on**. It plays the set and **switches itself off** when it's done.
+   The measurement panel shows the progress (*waiting… / capturing 2/3 / done 3/3*), and
+   the trace updates after every chirp.
+4. **Store** the result, change the DSP, and fire again to verify.
+
+Resetting the average (or clicking the status text) gets ready for a new set without
+replaying the generator, for example when the chirps come from somewhere else.
+
+From the iPad remote: turning the generator on fires the set and Store stores it,
+the same as on the laptop.
+
+## Modes
+
+| Mode | Gate | Use |
+|---|---|---|
+| **Chirp** | one long gate (the 1.5 s tail) | highest resolution; shows room modes and reflections |
+| **Chirp LTW** | frequency dependent (~28 cycles at 20 Hz to ~88 at 20 kHz, the same as OSM's LTW mode) | rejects late reflections and noise at mid/high frequencies; closest to Live-Capture's Multi-Win |
+
+Both gates **open at the first arrival**, not the biggest peak: the earliest point within
+100 ms before the peak that comes within 15 dB of it. So a strong reflection or room mode
+can't pull the gate or the delay late. The estimated delay (and the *apply delay* button)
+uses the same first arrival.
+
+## What you get
+
+- Magnitude, phase, group delay (from phase), impulse response, and coherence.
+- Coherence is the agreement *between chirps*, so it needs **2 or more** chirps
+  (one chirp shows 1.0 everywhere).
+- With **3 or more** chirps, a chirp that disagrees strongly with the others in a band
+  (a bang, a door, someone talking) is left out of that band.
+- Harmonic distortion products are gated out of the response.
+- Mic calibration files apply as usual.
+
+## How it works
+
+Each chirp is detected on the reference channel and captured with 0.1 s before it
+and the sweep plus 1.5 s after it. It is deconvolved against its own reference,
+h = IFFT(Y/X), with a minimum-phase band limit to the swept range. The impulse
+responses are gated around the first arrival. This removes the region before the
+arrival, where the sweep's harmonic products land, and most of the deconvolved noise.
+The gated responses are then averaged as complex numbers across chirps. The result
+is shown at raw FFT resolution at low frequencies and in 1/96-octave bands above that.
+
+Timing: one chirp period is sweep + 1.5 s tail + 0.35 s guard. A 1 s, 3-chirp set
+takes about 9 s.
+
+Code: `src/math/chirpsignal.h` (shared stimulus definition), `src/math/chirpanalyzer.*`
+(capture and analysis), `src/generator/chirp.*` (generator), and the chirp sections of
+`src/source/measurement.cpp`. Simulation tests are in `tests/chirp/chirp_test.cpp`:
+
+    g++ -O2 -std=c++17 -Isrc tests/chirp/chirp_test.cpp src/math/chirpanalyzer.cpp -o chirp_test && ./chirp_test
