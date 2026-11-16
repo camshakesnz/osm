@@ -20,6 +20,15 @@
 #include <future>
 #include <limits>
 #include <QMetaType>
+#include <array>
+#include <cstring>
+#include <memory>
+#include <vector>
+
+// The SDK's ASIOExit() releases the driver through this global (asio.cpp). The SDK's
+// own loadAsioDriver() would create it; OSM keeps its own AsioDrivers instead, so it
+// has to point the global at it, or ASIOExit() dereferences a null pointer.
+extern AsioDrivers *asioDrivers;
 
 namespace audio {
 
@@ -44,6 +53,7 @@ ASIOPlugin::ASIOPlugin() : Plugin(), m_bufferSize(0),
         return;
     }
     asioCallbacks::currentPlugin = this;
+    asioDrivers = &m_drivers;
 
     qRegisterMetaType<const QVector<float> &>();
     connect(this, &ASIOPlugin::runInputProcessing, this, [this](const QVector<float> &buffer) {
@@ -63,6 +73,9 @@ ASIOPlugin::~ASIOPlugin()
     m_workingThread.wait();
     stopCurrentDevice();
     asioCallbacks::currentPlugin = nullptr;
+    if (asioDrivers == &m_drivers) {
+        asioDrivers = nullptr;
+    }
 }
 
 QString ASIOPlugin::name() const
@@ -75,6 +88,143 @@ DeviceInfo::List ASIOPlugin::getDeviceInfoList() const
     return m_deviceList;
 }
 
+namespace {
+
+constexpr long MAX_PROBE_CHANNELS = 192;
+constexpr int ASIO_NAME_SIZE = 32;
+
+//! everything learned about one driver, plain data so it can live inside __try
+struct DriverProbe {
+    char name[ASIO_NAME_SIZE];
+    double sampleRate;
+    long inputCount, outputCount;
+    char inputNames[MAX_PROBE_CHANNELS][ASIO_NAME_SIZE];
+    char outputNames[MAX_PROBE_CHANNELS][ASIO_NAME_SIZE];
+};
+
+enum ProbeResult { ProbeOk, ProbeLoadFailed, ProbeInitFailed, ProbeSampleRateFailed, ProbeChannelsFailed, ProbeCrashed };
+
+/**
+ * Load one driver and read its sample rate and channels. Third party drivers
+ * sometimes crash when queried; on Windows the probe runs inside a structured
+ * exception handler, so a faulty driver is skipped instead of taking the app down.
+ * No C++ objects with destructors may live in this function (SEH restriction).
+ */
+ProbeResult probeDriverUnsafe(AsioDrivers *drivers, DriverProbe *probe)
+{
+    if (!drivers->loadDriver(probe->name)) {
+        return ProbeLoadFailed;
+    }
+    ASIODriverInfo driverInfo = {2L, 0, "", "", nullptr};
+    if (ASIOInit(&driverInfo) != ASE_OK) {
+        drivers->removeCurrentDriver();
+        return ProbeInitFailed;
+    }
+    ASIOSampleRate sr;
+    if (ASIOGetSampleRate(&sr) != ASE_OK) {
+        ASIOExit();
+        drivers->removeCurrentDriver();
+        return ProbeSampleRateFailed;
+    }
+    probe->sampleRate = sr;
+
+    long inputCount = 0, outputCount = 0;
+    if (ASIOGetChannels(&inputCount, &outputCount) != ASE_OK) {
+        ASIOExit();
+        drivers->removeCurrentDriver();
+        return ProbeChannelsFailed;
+    }
+    if (inputCount < 0 || inputCount > MAX_PROBE_CHANNELS) {
+        inputCount = 0;
+    }
+    if (outputCount < 0 || outputCount > MAX_PROBE_CHANNELS) {
+        outputCount = 0;
+    }
+    probe->inputCount = inputCount;
+    probe->outputCount = outputCount;
+
+    for (long j = 0; j < inputCount; ++j) {
+        ASIOChannelInfo channelInfo;
+        channelInfo.channel = j;
+        channelInfo.name[0] = '\0';
+        channelInfo.isInput = ASIOTrue;
+        channelInfo.type = ASIOSTFloat32LSB;
+        ASIOGetChannelInfo(&channelInfo);
+        memcpy(probe->inputNames[j], channelInfo.name, ASIO_NAME_SIZE);
+        probe->inputNames[j][ASIO_NAME_SIZE - 1] = '\0';
+    }
+    for (long j = 0; j < outputCount; ++j) {
+        ASIOChannelInfo channelInfo;
+        channelInfo.channel = j;
+        channelInfo.name[0] = '\0';
+        channelInfo.isInput = ASIOFalse;
+        ASIOGetChannelInfo(&channelInfo);
+        memcpy(probe->outputNames[j], channelInfo.name, ASIO_NAME_SIZE);
+        probe->outputNames[j][ASIO_NAME_SIZE - 1] = '\0';
+    }
+    ASIOExit();
+    drivers->removeCurrentDriver();
+    return ProbeOk;
+}
+
+ProbeResult probeDriver(AsioDrivers *drivers, DriverProbe *probe)
+{
+#ifdef _MSC_VER
+    __try {
+        return probeDriverUnsafe(drivers, probe);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return ProbeCrashed;
+    }
+#else
+    return probeDriverUnsafe(drivers, probe);
+#endif
+}
+
+long driverNamesUnsafe(AsioDrivers *drivers, char **names, long max)
+{
+    return drivers->getDriverNames(names, max);
+}
+
+long driverNames(AsioDrivers *drivers, char **names, long max)
+{
+#ifdef _MSC_VER
+    __try {
+        return driverNamesUnsafe(drivers, names, max);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return -1;
+    }
+#else
+    return driverNamesUnsafe(drivers, names, max);
+#endif
+}
+
+void releaseDriver(AsioDrivers *drivers)
+{
+#ifdef _MSC_VER
+    __try {
+        drivers->removeCurrentDriver();
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    }
+#else
+    drivers->removeCurrentDriver();
+#endif
+}
+
+const char *probeResultName(ProbeResult result)
+{
+    switch (result) {
+    case ProbeOk:               return "ok";
+    case ProbeLoadFailed:       return "could not be loaded";
+    case ProbeInitFailed:       return "ASIOInit failed";
+    case ProbeSampleRateFailed: return "ASIOGetSampleRate failed";
+    case ProbeChannelsFailed:   return "ASIOGetChannels failed";
+    case ProbeCrashed:          return "crashed while being queried and was skipped";
+    }
+    return "unknown";
+}
+
+} // namespace
+
 void ASIOPlugin::loadDeviceList()
 {
     if (!m_currentDevice.isNull()) {
@@ -83,79 +233,56 @@ void ASIOPlugin::loadDeviceList()
     CoInitialize(NULL);
     DeviceInfo::List list = {};
     auto that = const_cast<ASIOPlugin *>(this);
-    char **names = (char **)malloc(m_drivers.numdrv * sizeof(char *));
 
-    for (int i = 0; i < m_drivers.numdrv; ++i) {
-        names[i] = (char *)malloc(32 * sizeof(char));
+    const long count = std::max(0L, static_cast<long>(m_drivers.numdrv));
+    std::vector<std::array<char, 256>> nameBuffers(static_cast<size_t>(count));
+    std::vector<char *> names(static_cast<size_t>(count));
+    for (long i = 0; i < count; ++i) {
+        nameBuffers[i].fill('\0');
+        names[i] = nameBuffers[i].data();
+    }
+    const long found = count ? driverNames(&that->m_drivers, names.data(), count) : 0;
+    qInfo() << "ASIO: found" << found << "driver(s)";
+    if (found < 0) {
+        qWarning() << "ASIO: reading the driver list crashed; ASIO devices are not available";
     }
 
-    auto l = that->m_drivers.getDriverNames(names, 256);
-    for (int i = 0; i < l; ++i) {
-        if (!that->m_drivers.loadDriver(names[i])) {
-            qDebug() << "load" << names[i] << "failed";
-            continue;
-        }
-        DeviceInfo info(names[i], name());
-        info.setName(names[i]);
+    auto probe = std::make_unique<DriverProbe>();
+    for (long i = 0; i < found; ++i) {
+        std::memset(probe.get(), 0, sizeof(DriverProbe));
+        std::strncpy(probe->name, names[i], ASIO_NAME_SIZE - 1);
+        qInfo() << "ASIO: probing" << probe->name;
 
-        ASIODriverInfo driverInfo = {2L, 0, "", "", nullptr};
-        if (ASIOInit(&driverInfo) != ASE_OK) {
-            qDebug() << info.name() << "ASIOInit";
+        const auto result = probeDriver(&that->m_drivers, probe.get());
+        if (result != ProbeOk) {
+            qWarning() << "ASIO:" << probe->name << probeResultName(result);
+            if (result == ProbeCrashed) {
+                // the driver may be half initialised; let go of it
+                releaseDriver(&m_drivers);
+            }
             continue;
         }
-        ASIOSampleRate sr;
-        if (ASIOGetSampleRate(&sr) != ASE_OK) {
-            qDebug() << info.name() << "ASIOGetSampleRate";
+        if (!probe->inputCount && !probe->outputCount) {
+            qInfo() << "ASIO:" << probe->name << "has no channels";
             continue;
         }
-        info.setDefaultSampleRate(sr);
 
-        long inputCount = 0, outputCount = 0;
-        auto hr = ASIOGetChannels(&inputCount, &outputCount);
-        if (hr != ASE_OK) {
-            that->m_drivers.removeCurrentDriver();
-            qDebug() << info.name() << " can't get ASIOGetChannels " << hr;
-            continue;
-        }
-        if (inputCount < 0 || inputCount > 192 ) {
-            inputCount = 0;
-        }
-        if (outputCount < 0 || outputCount > 192 ) {
-            outputCount = 0;
-        }
-        if (!outputCount && !inputCount) {
-            continue;
-        }
+        DeviceInfo info(probe->name, name());
+        info.setName(probe->name);
+        info.setDefaultSampleRate(static_cast<unsigned int>(probe->sampleRate));
         QStringList inputs = {}, outputs = {};
-        for (long j = 0; j < inputCount; ++j) {
-            ASIOChannelInfo channelInfo;
-            channelInfo.channel = j;
-            channelInfo.name[0] = '\0';
-            channelInfo.isInput = ASIOTrue;
-            channelInfo.type = ASIOSTFloat32LSB;
-            ASIOGetChannelInfo(&channelInfo);
-            inputs << (channelInfo.name[0] != '\0' ? channelInfo.name : QString::number(j));
+        for (long j = 0; j < probe->inputCount; ++j) {
+            inputs << (probe->inputNames[j][0] != '\0' ? QString(probe->inputNames[j]) : QString::number(j));
+        }
+        for (long j = 0; j < probe->outputCount; ++j) {
+            outputs << (probe->outputNames[j][0] != '\0' ? QString(probe->outputNames[j]) : QString::number(j));
         }
         info.setInputChannels(inputs);
-        for (long j = 0; j < outputCount; ++j) {
-            ASIOChannelInfo channelInfo;
-            channelInfo.channel = j;
-            channelInfo.isInput = ASIOFalse;
-            channelInfo.name[0] = '\0';
-            ASIOGetChannelInfo(&channelInfo);
-            outputs << (channelInfo.name[0] != '\0' ? channelInfo.name : QString::number(j));
-        }
         info.setOutputChannels(outputs);
+        qInfo() << "ASIO:" << probe->name << "ok," << probe->inputCount << "in /" << probe->outputCount << "out at"
+                << probe->sampleRate;
         list << info;
-
-        that->m_drivers.removeCurrentDriver();
-        ASIOExit();
     }
-
-    for (int i = 0; i < m_drivers.numdrv; ++i) {
-        free(names[i]);
-    }
-    free(names);
 
     if (m_deviceList != list) {
         m_deviceList = list;
