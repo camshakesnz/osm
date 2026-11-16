@@ -388,16 +388,23 @@ Item {
         }
     }
 
+    // bottom right corner: clear of the type selector and other controls along the top
     Button {
         id: popOutButton
         visible: chartview.canPopOut
-        anchors.top: parent.top
-        anchors.right: typeSelect.left
-        implicitWidth: implicitHeight
-        implicitHeight: Material.buttonHeight
+        anchors.bottom: parent.bottom
+        anchors.right: parent.right
+        anchors.margins: 2
+        z: 10
+        implicitWidth: 30
+        implicitHeight: 30
+        topInset: 0
+        bottomInset: 0
+        padding: 0
         flat: true
         text: "\u2197"
-        font.pixelSize: 16
+        font.pixelSize: 15
+        opacity: hovered ? 1 : 0.45
         onClicked: applicationWindow.popOut(chart.type, chartview.settingsGroup)
         ToolTip.visible: hovered
         ToolTip.text: qsTr("open this chart in its own window (e.g. meters on a second display)")

@@ -86,14 +86,21 @@ Window {
         onTypeChanged: popout.groupSettings.setValue("type", type)
     }
 
+    // same corner as the pop-out button in the main window
     Button {
-        anchors.top: parent.top
-        anchors.left: parent.left
+        anchors.bottom: parent.bottom
+        anchors.right: parent.right
+        anchors.margins: 2
+        z: 10
+        implicitWidth: 30
+        implicitHeight: 30
+        topInset: 0
+        bottomInset: 0
+        padding: 0
         flat: true
-        implicitWidth: implicitHeight
         text: popout.visibility === Window.FullScreen ? "↙" : "⤢"
-        font.pixelSize: 16
-        opacity: hovered ? 1 : 0.35
+        font.pixelSize: 15
+        opacity: hovered ? 1 : 0.45
         onClicked: popout.toggleFullScreen()
         ToolTip.visible: hovered
         ToolTip.text: qsTr("full screen (F11, Esc to leave)")
