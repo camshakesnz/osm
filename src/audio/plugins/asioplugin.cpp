@@ -234,7 +234,7 @@ void ASIOPlugin::loadDeviceList()
     DeviceInfo::List list = {};
     auto that = const_cast<ASIOPlugin *>(this);
 
-    const long count = std::max(0L, static_cast<long>(m_drivers.numdrv));
+    const long count = m_drivers.numdrv > 0 ? static_cast<long>(m_drivers.numdrv) : 0L;
     std::vector<std::array<char, 256>> nameBuffers(static_cast<size_t>(count));
     std::vector<char *> names(static_cast<size_t>(count));
     for (long i = 0; i < count; ++i) {
