@@ -22,6 +22,7 @@ import QtGraphicalEffects 1.15
 import OpenSoundMeter 1.0
 import "elements"
 import "SPL" as SPL;
+import "Loudness" as Loudness
 
 Item {
     id: chartview
@@ -388,6 +389,14 @@ Item {
         }
     }
 
+    Loader {
+        anchors.fill: parent
+        active: chart.type == "Loudness"
+        sourceComponent: Loudness.LoudnessView {
+            settings: chartview.settings
+        }
+    }
+
     // bottom right corner: clear of the type selector and other controls along the top
     Button {
         id: popOutButton
@@ -418,8 +427,8 @@ Item {
         implicitHeight: Material.buttonHeight
         background: null
         model: applicationAppearance.experimentFunctions ?
-                   ["Spectrum", "Magnitude", "Phase", "Impulse", "Step", "Coherence", "Group Delay", "Phase Delay", "Spectrogram", "Level", "Numeric", "Crest Factor", "Nyquist"] :
-                   ["Spectrum", "Magnitude", "Phase", "Impulse", "Step", "Coherence", "Group Delay", "Spectrogram", "Level", "Numeric"]
+                   ["Spectrum", "Magnitude", "Phase", "Impulse", "Step", "Coherence", "Group Delay", "Phase Delay", "Spectrogram", "Level", "Numeric", "Loudness", "Crest Factor", "Nyquist"] :
+                   ["Spectrum", "Magnitude", "Phase", "Impulse", "Step", "Coherence", "Group Delay", "Spectrogram", "Level", "Numeric", "Loudness"]
         currentIndex: model.indexOf(type)
         onCurrentIndexChanged: {
             var pb = applicationWindow.properiesbar;

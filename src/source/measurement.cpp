@@ -149,6 +149,7 @@ QJsonObject Measurement::toJSON() const noexcept
     data["deviceName"]      = deviceName();
     data["mode"]            = mode();
     data["chirpAutoStore"]  = chirpAutoStore();
+    data["loudnessMono"]    = loudnessMono();
     data["inputFilters"]    = static_cast<int>(inputFilter());
 
     QJsonObject calibration;
@@ -185,6 +186,7 @@ void Measurement::fromJSON(QJsonObject data, const SourceList *list) noexcept
 
     setMode(             data["mode"             ].toInt(mode()));
     setChirpAutoStore(   data["chirpAutoStore"   ].toBool(chirpAutoStore()));
+    setLoudnessMono(     data["loudnessMono"     ].toBool(loudnessMono()));
     setAverageType(      data["averageType"      ].toInt(averageType()));
     setFiltersFrequency( data["filtersFrequency" ].toInt(filtersFrequency()));
     setWindowFunctionType(data["window.type"     ].toInt(m_windowFunctionType));
@@ -355,6 +357,7 @@ void Measurement::onSampleRateChanged()
     std::lock_guard<std::mutex> guard(m_dataMutex);
     if (m_audioStream) {
         setSampleRate(m_audioStream->format().sampleRate);
+        m_loudness.setSampleRate(sampleRate());
         m_dataFT.setSampleRate(sampleRate());
         m_dataFT.prepare();
         m_levelMeters.setSampleRate(sampleRate());
@@ -515,6 +518,8 @@ void Measurement::writeData(const char *data, qint64 len)
     bool forceRef = referenceChanel() >= totalChanels;
     bool forceData = dataChanel() >= totalChanels;
     float loopSample = 0;
+    float frameData = 0, frameReference = 0;
+    const bool feedLoudness = m_loudnessActive.load();
     bool loopAvailable = m_loopBuffer.collected() >= m_audioStream->depth() * len / (totalChanels * sizeof(float));
     qint64 offset = 0;
     for (auto it = data; offset < len; ) {
@@ -526,12 +531,14 @@ void Measurement::writeData(const char *data, qint64 len)
             memcpy(&sample, it, sizeof(float));
             m_data.write(m_polarity ? -m_gain *sample : sample * m_gain);
             m_levelMeters.add(sample * m_gain);
+            frameData = sample;
         }
 
         if (currentChanel == referenceChanel()) {
             memcpy(&sample, it, sizeof(float));
             m_reference.write(sample * m_offset);
             m_levelMeters.addToReference(sample * m_offset);
+            frameReference = sample;
         }
         ++currentChanel;
         if (currentChanel >= totalChanels) {
@@ -542,6 +549,11 @@ void Measurement::writeData(const char *data, qint64 len)
             if (forceData) {
                 m_data.write(loopSample * m_gain);
                 m_levelMeters.add(loopSample * m_gain);
+            }
+            if (feedLoudness) {
+                // raw input: loudness is about the signal itself (dBFS), not the
+                // measurement's gain/offset calibration
+                m_loudness.add(forceData ? loopSample : frameData, forceRef ? loopSample : frameReference);
             }
             currentChanel = 0;
         }
@@ -554,6 +566,15 @@ void Measurement::transform()
 {
     if (!active() || m_error)
         return;
+
+    if (m_loudnessActive.load()) {
+        // stop measuring loudness when nothing has read it for a while
+        if (QDateTime::currentMSecsSinceEpoch() - m_loudnessPolled.load() > 5000) {
+            m_loudnessActive = false;
+        } else {
+            m_loudness.process();
+        }
+    }
 
     if (m_mode == Mode::Chirp || m_mode == Mode::ChirpLTW || chirpMode()) {
         transformChirp();
@@ -754,6 +775,7 @@ Shared::Source Measurement::clone() const
     cloned->setActive(false);
     cloned->setMode(mode());
     cloned->setChirpAutoStore(chirpAutoStore());
+    cloned->setLoudnessMono(loudnessMono());
     cloned->setAverageType(averageType());
     cloned->setAverage(average());
     cloned->setFiltersFrequency(filtersFrequency());
@@ -1177,4 +1199,53 @@ void Measurement::transformChirp()
     updateChirpStatus();
     emit levelChanged();
     emit referenceLevelChanged();
+}
+
+// ---------------------------------------------------------------- loudness
+
+QVariantMap Measurement::loudness()
+{
+    m_loudnessPolled = QDateTime::currentMSecsSinceEpoch();
+    if (!m_loudnessActive.load()) {
+        // (re)starting: nothing was measured while unused, so start a fresh programme.
+        // Set up before the audio thread is allowed to feed it (writeData holds the mutex).
+        {
+            std::lock_guard<std::mutex> guard(m_dataMutex);
+            m_loudness.setSampleRate(sampleRate());
+        }
+        m_loudness.reset();
+        m_loudnessActive = true;
+    }
+    const auto v = m_loudness.values();
+    return {
+        {"momentary",        v.momentary},
+        {"shortTerm",        v.shortTerm},
+        {"integrated",       v.integrated},
+        {"range",            v.range},
+        {"peakLeft",         v.peakLeft},
+        {"peakRight",        v.peakRight},
+        {"maxTruePeakLeft",  v.maxTruePeakLeft},
+        {"maxTruePeakRight", v.maxTruePeakRight},
+        {"duration",         v.duration},
+        {"mono",             loudnessMono()},
+        {"active",           active()}
+    };
+}
+
+void Measurement::resetLoudness()
+{
+    m_loudness.reset();
+}
+
+bool Measurement::loudnessMono() const noexcept
+{
+    return m_loudness.mono();
+}
+
+void Measurement::setLoudnessMono(bool mono)
+{
+    if (m_loudness.mono() != mono) {
+        m_loudness.setMono(mono);
+        emit loudnessMonoChanged(mono);
+    }
 }

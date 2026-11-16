@@ -79,3 +79,28 @@ second display** while the main window keeps the graphs.
   a meter or chart opens its properties in the main window.
 - Open windows, with their size, position, full screen state and settings, come back on
   the next start. Closing a window forgets it.
+
+# Loudness
+
+Chart type **Loudness**: stream/programme loudness to EBU R 128 (ITU-R BS.1770-4),
+like a simple loudness meter plug-in, inside OSM.
+
+- **Source:** pick a measurement in the chart's first drop-down. Its **measurement channel
+  is Left** and its **reference channel is Right**, so set those to the stream's L and R
+  inputs. **Mono** uses the measurement channel only. The measurement must be switched on.
+- **Bars:** sample peak per channel in dBFS (-60 to 0) with a 2 s peak hold. Green below
+  -18, amber to -6, red above. Under each bar: the maximum **true peak** (dBTP) since reset,
+  red above -1 dBTP.
+- **Numbers:** **Short-term** (3 s) and **Integrated** (gated programme loudness) in LUFS.
+  Underneath: **Momentary** (400 ms), loudness **Range** (LRA, LU), **True peak max**, and
+  measuring **time**.
+- **Target:** -14, -16, -18, -23 or -24 LUFS. Integrated turns green within 1 LU of the
+  target and amber within 3 LU.
+- **Reset** starts a new programme: it clears integrated, range, true peak and time.
+  Switching Stereo/Mono also starts a new one.
+- Loudness is measured only while a Loudness chart is showing that measurement (including
+  in a pop-out window). After it has been hidden for more than 5 s, it starts fresh next time.
+- The chart (source and target) can be popped out like any other chart.
+
+Verified against the EBU Tech 3341 (loudness, gating) and Tech 3342 (range) test cases at
+44.1, 48 and 96 kHz: `tests/loudness/loudness_test.cpp`.

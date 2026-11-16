@@ -97,6 +97,7 @@ SOURCES += src/main.cpp \
     src/math/windowfunction.cpp \
     src/math/deconvolution.cpp \
     src/math/chirpanalyzer.cpp \
+    src/math/loudness.cpp \
     \
     src/meta/metabase.cpp \
     src/meta/metafilter.cpp \
@@ -280,6 +281,7 @@ HEADERS += \
     src/math/fouriertransform.h \
     src/math/deconvolution.h \
     src/math/chirpanalyzer.h \
+    src/math/loudness.h \
     src/math/chirpsignal.h \
     src/math/windowfunction.h \
     src/math/deconvolution.h \

@@ -34,6 +34,7 @@
 #include "math/fouriertransform.h"
 #include "math/deconvolution.h"
 #include "math/chirpanalyzer.h"
+#include "math/loudness.h"
 #include "math/bessellpf.h"
 #include "math/coherence.h"
 #include "math/filter.h"
@@ -92,6 +93,9 @@ class Measurement : public Abstract::Source, public Meta::Measurement
     //chirp modes: store the result automatically when a set finishes
     Q_PROPERTY(bool chirpAutoStore READ chirpAutoStore WRITE setChirpAutoStore NOTIFY chirpAutoStoreChanged)
 
+    //loudness (EBU R128): measurement channel = left, reference channel = right, or mono
+    Q_PROPERTY(bool loudnessMono READ loudnessMono WRITE setLoudnessMono NOTIFY loudnessMonoChanged)
+
 public:
     explicit Measurement(QObject *parent = nullptr);
     ~Measurement() override;
@@ -136,6 +140,16 @@ public:
     QString chirpStatus() const;
     //! wait for a new chirp set (also called when the chirp generator starts)
     Q_INVOKABLE void armChirp() noexcept;
+
+    /**
+     * Current loudness values (LUFS, LU, dBFS, dBTP). Calling it also keeps the
+     * loudness meter running: it only measures while something reads it, and starts
+     * fresh after it has been unused for a while.
+     */
+    Q_INVOKABLE QVariantMap loudness();
+    Q_INVOKABLE void resetLoudness();
+    bool loudnessMono() const noexcept;
+    void setLoudnessMono(bool mono);
     Q_INVOKABLE void destroy() override final;
 
 public slots:
@@ -210,6 +224,10 @@ private:
     std::vector<std::pair<float, float>> m_chirpInput;
     QString m_chirpStatus;
     std::atomic<bool> m_chirpAutoStore {true};
+
+    LoudnessMeter m_loudness;
+    std::atomic<bool> m_loudnessActive {false};
+    std::atomic<qint64> m_loudnessPolled {0};
     mutable std::mutex m_chirpStatusMutex;
 
     bool m_enableCalibration, m_calibrationLoaded;
@@ -237,6 +255,7 @@ signals:
     void chirpAutoStoreChanged(bool);
     //! a chirp set has finished and auto store is on
     void chirpSetComplete();
+    void loudnessMonoChanged(bool);
 
     void polarityChanged(bool) override;
     void gainChanged(float) override;

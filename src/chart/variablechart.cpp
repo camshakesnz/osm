@@ -101,6 +101,8 @@ void VariableChart::initType()
         break;
 
     case SPL:
+    case Loudness:
+        // drawn in QML (SPL/Grid.qml, Loudness/LoudnessView.qml)
         newPlot = nullptr;
         break;
 
