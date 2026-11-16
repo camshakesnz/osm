@@ -27,6 +27,10 @@ Item {
     id: chartview
     property alias type: chart.type
     property alias settings: chart.settings
+    //! settings group name, used to copy this chart into a pop-out window
+    property string settingsGroup: ""
+    //! charts in the main window can be popped out into their own window
+    property bool canPopOut: true
 
     VariableChart {
         id: chart
@@ -384,7 +388,23 @@ Item {
         }
     }
 
+    Button {
+        id: popOutButton
+        visible: chartview.canPopOut
+        anchors.top: parent.top
+        anchors.right: typeSelect.left
+        implicitWidth: implicitHeight
+        implicitHeight: Material.buttonHeight
+        flat: true
+        text: "\u2197"
+        font.pixelSize: 16
+        onClicked: applicationWindow.popOut(chart.type, chartview.settingsGroup)
+        ToolTip.visible: hovered
+        ToolTip.text: qsTr("open this chart in its own window (e.g. meters on a second display)")
+    }
+
     DropDown {
+        id: typeSelect
         anchors.top: parent.top
         anchors.right: parent.right
         implicitWidth: 145

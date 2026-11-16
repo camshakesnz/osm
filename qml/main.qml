@@ -60,6 +60,110 @@ ApplicationWindow {
         applicationWindow.onHeightChanged.connect(function() {applicationSettings.setValue("mainwindow/height", height)});
         applicationWindow.onXChanged.connect(function() {applicationSettings.setValue("mainwindow/x", x)});
         applicationWindow.onYChanged.connect(function() {applicationSettings.setValue("mainwindow/y", y)});
+
+        restorePopouts();
+    }
+
+    // ---------------------------------------------------------------- pop-out windows
+    // Charts opened in their own windows (e.g. numeric meters on a second display).
+    // Open ones are listed in layout/windows/ids and come back on the next start.
+    property var popoutWindows: ({})
+
+    Component {
+        id: popoutComponent
+        PopoutWindow {}
+    }
+
+    function popoutIds() {
+        var ids = applicationSettings.value("layout/windows/ids", "");
+        if (!ids) {
+            return [];
+        }
+        return String(ids).split(",").filter(function(id) { return id.length > 0; });
+    }
+
+    function savePopoutIds() {
+        applicationSettings.setValue("layout/windows/ids", Object.keys(popoutWindows).join(","));
+    }
+
+    function createPopout(windowId) {
+        var w = popoutComponent.createObject(null, { windowId: windowId });
+        if (!w) {
+            return null;
+        }
+        w.closedByUser.connect(function(id) {
+            // Forget the window only if the app is still running a moment later:
+            // quitting (e.g. Cmd-Q on macOS) can close pop-outs before the main window,
+            // and those should come back on the next start.
+            var timer = Qt.createQmlObject("import QtQuick 2.0; Timer { interval: 1500; running: true }",
+                                           applicationWindow, "popoutCloseTimer");
+            timer.triggered.connect(function() {
+                timer.destroy();
+                if (applicationWindow.askBeforeClose === false) {
+                    return;
+                }
+                delete popoutWindows[id];
+                savePopoutIds();
+                applicationSettings.removeGroup("layout/windows/" + id);
+                w.destroy();
+            });
+        });
+        popoutWindows[windowId] = w;
+        return w;
+    }
+
+    //! open a chart of `type` in a new window, copying the settings of `fromGroup` if given
+    function popOut(type, fromGroup) {
+        var windowId = "w" + Date.now().toString(36);
+        var group = "layout/windows/" + windowId;
+        if (fromGroup) {
+            applicationSettings.copyGroup(fromGroup, group);
+        }
+        applicationSettings.setValue(group + "/type", type || "Numeric");
+
+        // start on another display when there is one
+        var screens = Qt.application.screens;
+        var target = null;
+        for (var i = 0; i < screens.length; ++i) {
+            if (screens[i].name !== applicationWindow.screen.name) {
+                target = screens[i];
+                break;
+            }
+        }
+        var size = { width: 800, height: 500 };
+        if (target) {
+            applicationSettings.setValue(group + "/window/x", target.virtualX + (target.width - size.width) / 2);
+            applicationSettings.setValue(group + "/window/y", target.virtualY + (target.height - size.height) / 2);
+        } else {
+            applicationSettings.setValue(group + "/window/x", applicationWindow.x + 60);
+            applicationSettings.setValue(group + "/window/y", applicationWindow.y + 60);
+        }
+        applicationSettings.setValue(group + "/window/width", size.width);
+        applicationSettings.setValue(group + "/window/height", size.height);
+        applicationSettings.setValue(group + "/window/fullScreen", false);
+
+        var w = createPopout(windowId);
+        savePopoutIds();
+        if (w) {
+            w.raise();
+            w.requestActivate();
+        }
+    }
+
+    function restorePopouts() {
+        var ids = popoutIds();
+        for (var i = 0; i < ids.length; ++i) {
+            createPopout(ids[i]);
+        }
+        savePopoutIds();
+    }
+
+    //! close pop-outs when the app quits, keeping them for the next start
+    function closePopoutsForQuit() {
+        for (var id in popoutWindows) {
+            popoutWindows[id].quitting = true;
+            popoutWindows[id].close();
+        }
     }
     minimumWidth: 768
     minimumHeight: 540
@@ -91,6 +195,7 @@ ApplicationWindow {
         askBeforeClose = false;
         autoSaver.stop();
         autoSaver.save();
+        closePopoutsForQuit();
         close();
     }
     function closeRejected() {

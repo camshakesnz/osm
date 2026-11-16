@@ -1167,12 +1167,13 @@ void Measurement::transformChirp()
         }
         m_chirpEstimate.store(m_chirp.peakDelay());
         unlock();
-        emit readyRead();
         emit estimatedChanged();
         if (m_chirp.state() == ChirpAnalyzer::State::Complete && m_chirpAutoStore.load()) {
             emit chirpSetComplete();
         }
     }
+    // every tick, like the other modes: level meters (numeric/SPL) refresh on readyRead
+    emit readyRead();
     updateChirpStatus();
     emit levelChanged();
     emit referenceLevelChanged();

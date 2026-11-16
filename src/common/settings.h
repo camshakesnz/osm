@@ -36,6 +36,11 @@ public:
     Q_INVOKABLE Settings *getGroup(const QString &groupName);
     Q_INVOKABLE Settings *getSubGroup(const QString &groupName);
 
+    //! replace group `to` with a copy of group `from` (absolute names)
+    Q_INVOKABLE void copyGroup(const QString &from, const QString &to);
+    //! delete a group and everything in it (absolute name)
+    Q_INVOKABLE void removeGroup(const QString &group);
+
     template <typename C, typename T>
     QVariant reactValue(
         const QString &key,

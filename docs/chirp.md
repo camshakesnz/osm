@@ -64,3 +64,18 @@ Code: `src/math/chirpsignal.h` (shared stimulus definition), `src/math/chirpanal
 `src/source/measurement.cpp`. Simulation tests are in `tests/chirp/chirp_test.cpp`:
 
     g++ -O2 -std=c++17 -Isrc tests/chirp/chirp_test.cpp src/math/chirpanalyzer.cpp -o chirp_test && ./chirp_test
+
+# Pop-out windows
+
+Any chart can be opened in its own window, for example the **numeric meters on a
+second display** while the main window keeps the graphs.
+
+- Click **↗** next to a chart's type selector to open that chart in a new window, with the
+  same settings (for Numeric: the same meter layout and sources).
+  Or **View → New window (meters)** (Ctrl+Shift+M) opens a fresh Numeric window.
+- A new window opens on another display if there is one.
+- The **⤢** button in the corner (or F11) toggles full screen; Esc leaves full screen.
+- The chart type and its settings can be changed inside the window as normal; clicking
+  a meter or chart opens its properties in the main window.
+- Open windows, with their size, position, full screen state and settings, come back on
+  the next start. Closing a window forgets it.

@@ -237,6 +237,11 @@ MenuBar {
             }
         }
         MenuItem {
+            text: qsTr("New &window (meters)")
+            shortcut: "Ctrl+Shift+M"
+            onTriggered: applicationWindow.popOut("Numeric", "")
+        }
+        MenuItem {
             id: experimentFunctions
             text: qsTr("&Experiment functions")
             checkable: true

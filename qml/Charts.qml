@@ -53,6 +53,7 @@ Item {
              type: applicationSettings.value("layout/charts/1/type", "Spectrum")
              onTypeChanged: applicationSettings.setValue("layout/charts/1/type", type)
 
+             settingsGroup: "layout/charts/1"
              Component.onCompleted: {
                  settings = applicationSettings.getGroup("layout/charts/1");
              }
@@ -69,6 +70,7 @@ Item {
              type: applicationSettings.value("layout/charts/2/type", "Spectrum")
              onTypeChanged: applicationSettings.setValue("layout/charts/2/type", type)
 
+             settingsGroup: "layout/charts/2"
              Component.onCompleted: {
                  settings = applicationSettings.getGroup("layout/charts/2");
              }
@@ -85,6 +87,7 @@ Item {
              type: applicationSettings.value("layout/charts/3/type", "Spectrum")
              onTypeChanged: applicationSettings.setValue("layout/charts/3/type", type)
 
+             settingsGroup: "layout/charts/3"
              Component.onCompleted: {
                  settings = applicationSettings.getGroup("layout/charts/3");
              }

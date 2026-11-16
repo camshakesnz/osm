@@ -54,6 +54,34 @@ Settings *Settings::getSubGroup(const QString &groupName)
     return getGroup(m_group + groupName);
 }
 
+void Settings::copyGroup(const QString &from, const QString &to)
+{
+    if (from.isEmpty() || to.isEmpty() || from == to) {
+        return;
+    }
+    QList<QPair<QString, QVariant>> values;
+    m_settings->beginGroup(from);
+    for (const auto &key : m_settings->allKeys()) {
+        values << qMakePair(key, m_settings->value(key));
+    }
+    m_settings->endGroup();
+
+    m_settings->beginGroup(to);
+    m_settings->remove("");
+    for (const auto &value : values) {
+        m_settings->setValue(value.first, value.second);
+    }
+    m_settings->endGroup();
+}
+
+void Settings::removeGroup(const QString &group)
+{
+    if (group.isEmpty()) {
+        return;
+    }
+    m_settings->remove(group);
+}
+
 void Settings::flush()
 {
     m_settings->sync();

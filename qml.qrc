@@ -26,6 +26,7 @@
         <file alias="ModalDialog.qml">qml/ModalDialog.qml</file>
         <file alias="Plot/GroupDelayProperties.qml">qml/Plot/GroupDelayProperties.qml</file>
         <file alias="Calculator.qml">qml/Calculator.qml</file>
+        <file alias="PopoutWindow.qml">qml/PopoutWindow.qml</file>
         <file alias="Shortcuts.qml">qml/Shortcuts.qml</file>
         <file alias="source/Union.qml">qml/source/Union.qml</file>
         <file alias="source/UnionProperties.qml">qml/source/UnionProperties.qml</file>
