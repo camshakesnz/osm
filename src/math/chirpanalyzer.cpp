@@ -80,7 +80,7 @@ void ChirpAnalyzer::FFT::resize(unsigned int n)
     }
     m_twiddle.resize(n / 2);
     for (unsigned int i = 0; i < n / 2; ++i) {
-        m_twiddle[i] = std::polar(1.0, -2. * M_PI * i / n);
+        m_twiddle[i] = std::polar(1.0, -2. * chirp::PI * i / n);
     }
 }
 
@@ -394,10 +394,10 @@ double ChirpAnalyzer::bandWeight(double f) const
         return f >= f1 && f <= f2 ? 1. : 0.;
     }
     if (f < f1) {
-        return 0.5 * (1. - std::cos(M_PI * std::log(f / lo) / std::log(f1 / lo)));
+        return 0.5 * (1. - std::cos(chirp::PI * std::log(f / lo) / std::log(f1 / lo)));
     }
     if (f > f2) {
-        return 0.5 * (1. + std::cos(M_PI * std::log(f / f2) / std::log(hi / f2)));
+        return 0.5 * (1. + std::cos(chirp::PI * std::log(f / f2) / std::log(hi / f2)));
     }
     return 1.;
 }
@@ -488,7 +488,7 @@ unsigned int ChirpAnalyzer::findArrival()
         const long lo = static_cast<long>(centre / 2. / df), hi = std::min(static_cast<long>(centre * 2. / df), N / 2);
         for (long i = std::max(1L, lo); i <= hi; ++i) {
             const double x = std::log2(i * df / centre);      // -1 .. 1
-            const double w = 0.5 * (1. + std::cos(M_PI * x));
+            const double w = 0.5 * (1. + std::cos(chirp::PI * x));
             m_work2[static_cast<size_t>(i)] = 2. * w * m_work[static_cast<size_t>(i)];
         }
         m_fft.inverse(m_work2);
@@ -567,7 +567,7 @@ void ChirpAnalyzer::gateChirp(unsigned int c)
         if (tau >= -pre / 2) {
             return 1.;
         }
-        return 0.5 * (1. - std::cos(M_PI * (tau + pre) / (pre / 2.)));
+        return 0.5 * (1. - std::cos(chirp::PI * (tau + pre) / (pre / 2.)));
     };
 
     std::vector<cd> &out = m_gated[c];
@@ -581,7 +581,7 @@ void ChirpAnalyzer::gateChirp(unsigned int c)
         for (long tau = -pre; tau <= post; ++tau) {
             double w = rise(tau);
             if (tau > post - taper) {
-                w *= 0.5 * (1. + std::cos(M_PI * (tau - (post - taper)) / taper));
+                w *= 0.5 * (1. + std::cos(chirp::PI * (tau - (post - taper)) / taper));
             }
             m_work[static_cast<size_t>((tau + N) % N)] = value(tau) * w;  // centre moved to t = 0
         }
@@ -597,14 +597,14 @@ void ChirpAnalyzer::gateChirp(unsigned int c)
         const long post = static_cast<long>(band.gate);
         const double half = 0.5 * post;
         for (unsigned int i = band.first; i <= band.last; ++i) {
-            const double omega = -2. * M_PI * i / N;
+            const double omega = -2. * chirp::PI * i / N;
             const cd step = std::polar(1., omega);
             cd rot = std::polar(1., omega * -pre);
             cd sum = 0.;
             for (long tau = -pre; tau <= post; ++tau) {
                 double w = rise(tau);
                 if (tau > half) {
-                    w *= 0.5 * (1. + std::cos(M_PI * (tau - half) / (post - half)));
+                    w *= 0.5 * (1. + std::cos(chirp::PI * (tau - half) / (post - half)));
                 }
                 sum += value(tau) * w * rot;
                 rot *= step;
@@ -680,7 +680,7 @@ void ChirpAnalyzer::combine()
         }
 
         p.magnitude = static_cast<float>(std::sqrt(power / width));
-        p.phase = static_cast<float>(std::remainder(std::arg(sum) - 2. * M_PI * band.frequency * tau, 2. * M_PI));
+        p.phase = static_cast<float>(std::remainder(std::arg(sum) - 2. * chirp::PI * band.frequency * tau, 2. * chirp::PI));
         p.coherence = static_cast<float>(total > 0 ? std::min(1., power / total) : 0.);
 
         double syy = 0;

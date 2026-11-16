@@ -14,6 +14,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Fetch upstream version tags
+        shell: bash
+        run: git fetch --tags https://github.com/psmokotnin/osm.git || true
       - uses: jurplel/install-qt-action@v4
         with:
           version: '5.15.2'
@@ -43,6 +46,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Fetch upstream version tags
+        shell: bash
+        run: git fetch --tags https://github.com/psmokotnin/osm.git || true
       - uses: jurplel/install-qt-action@v4
         with:
           version: '5.15.2'

@@ -37,6 +37,9 @@
  */
 namespace chirp {
 
+//! M_PI isn't defined by MSVC without _USE_MATH_DEFINES
+constexpr double PI = 3.14159265358979323846;
+
 constexpr unsigned int MIN_COUNT = 1;
 constexpr unsigned int MAX_COUNT = 6;
 
@@ -87,13 +90,13 @@ inline float sweepSample(double t, double T, double f1, double f2)
         return 0.f;
     }
     const double r = std::log(f2 / f1);
-    const double phase = 2. * M_PI * f1 * T / r * (std::exp(r * t / T) - 1.);
+    const double phase = 2. * PI * f1 * T / r * (std::exp(r * t / T) - 1.);
     double env = 1.;
     const double fi = fadeInSeconds(T), fo = fadeOutSeconds(T);
     if (t < fi) {
-        env = 0.5 * (1. - std::cos(M_PI * t / fi));
+        env = 0.5 * (1. - std::cos(PI * t / fi));
     } else if (t > T - fo) {
-        env = 0.5 * (1. - std::cos(M_PI * (T - t) / fo));
+        env = 0.5 * (1. - std::cos(PI * (T - t) / fo));
     }
     return static_cast<float>(env * std::sin(phase));
 }
