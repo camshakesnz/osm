@@ -221,6 +221,14 @@ void MeterPlot::setSettings(Settings *newSettings)
     setPause(
         m_settings->reactValue<MeterPlot, bool>("pause", this, &MeterPlot::pauseChanged, pause()).toBool()
     );
+    // after the type: which times are available depends on it (Leq has its own)
+    setTime(
+        m_settings->reactValue<MeterPlot, QString>("time", this, &MeterPlot::timeChanged, timeName()).toString()
+    );
+    setPeakHold(m_settings->value("peakHold", peakHold()).toBool());
+    connect(this, &MeterPlot::peakHoldChanged, m_settings, [this, settings = m_settings]() {
+        settings->setValue("peakHold", peakHold());
+    });
 }
 
 SourceList *MeterPlot::sourceList() const

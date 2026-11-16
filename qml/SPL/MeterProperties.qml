@@ -50,8 +50,9 @@ Item {
                 }
                 textRole: "title"
                 valueRole: "source"
-                onCurrentIndexChanged: {
-                    dataObject.meter.source = model.get(currentIndex);
+                // only on a user choice: list refreshes must not change the meter
+                onActivated: function(index) {
+                    dataObject.meter.source = model.get(index);
                 }
             }
 
@@ -61,7 +62,7 @@ Item {
                 model: dataObject.meter.availableTypes
                 currentIndex: model.indexOf(dataObject.meter.type)
 
-                onCurrentValueChanged: dataObject.meter.type = currentValue
+                onActivated: function(index) { dataObject.meter.type = model[index]; }
 
                 ToolTip.visible: hovered
                 ToolTip.text: qsTr("type")
@@ -72,8 +73,8 @@ Item {
                 Layout.preferredWidth: narrowWidth
                 model: ["dBFs", "SPL"]
                 currentIndex: dataObject.meter.mode
-                onCurrentIndexChanged: {
-                    dataObject.meter.mode = currentIndex;
+                onActivated: function(index) {
+                    dataObject.meter.mode = index;
                 }
                 enabled: dataObject.meter.type !== "Time"  &&
                          dataObject.meter.type !== "THD+N" &&
@@ -90,7 +91,7 @@ Item {
                 Layout.preferredWidth: narrowWidth
                 model: dataObject.meter.availableCurves
                 currentIndex: model.indexOf(dataObject.meter.curve)
-                onCurrentValueChanged: dataObject.meter.curve = currentValue
+                onActivated: function(index) { dataObject.meter.curve = model[index]; }
 
                 enabled: dataObject.meter.type !== "Time" &&
                          dataObject.meter.type !== "THD+N" &&
@@ -106,7 +107,7 @@ Item {
 
                 model: dataObject.meter.availableTimes
                 currentIndex: model.indexOf(dataObject.meter.time)
-                onCurrentValueChanged: currentValue ? dataObject.meter.time = currentValue : {}
+                onActivated: function(index) { dataObject.meter.time = model[index]; }
 
                 enabled: dataObject.meter.type !== "Time" &&
                          dataObject.meter.type !== "THD+N" &&
@@ -147,8 +148,8 @@ Item {
                 Layout.preferredWidth: narrowWidth
                 model: [1, 2, 3]
                 currentIndex: dataObject.grid.model.rows - 1
-                onCurrentIndexChanged: {
-                    dataObject.grid.model.rows = currentIndex + 1;
+                onActivated: function(index) {
+                    dataObject.grid.model.rows = index + 1;
                 }
                 ToolTip.visible: hovered
                 ToolTip.text: qsTr("meter rows")
@@ -158,8 +159,8 @@ Item {
                 Layout.preferredWidth: narrowWidth
                 model: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
                 currentIndex: dataObject.grid.model.columns - 1
-                onCurrentIndexChanged: {
-                    dataObject.grid.model.columns = currentIndex + 1;
+                onActivated: function(index) {
+                    dataObject.grid.model.columns = index + 1;
                 }
 
                 ToolTip.visible: hovered
@@ -170,7 +171,7 @@ Item {
                 text: "peak"
                 checkable: true
                 checked: dataObject.meter.peakHold
-                onCheckedChanged: dataObject.meter.peakHold = checked
+                onClicked: dataObject.meter.peakHold = checked
                 Material.background: parent.Material.background
 
                 ToolTip.visible: hovered
