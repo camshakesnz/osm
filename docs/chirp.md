@@ -85,9 +85,12 @@ second display** while the main window keeps the graphs.
 Chart type **Loudness**: stream/programme loudness to EBU R 128 (ITU-R BS.1770-4),
 like a simple loudness meter plug-in, inside OSM.
 
-- **Source:** pick a measurement in the chart's first drop-down. Its **measurement channel
-  is Left** and its **reference channel is Right**, so set those to the stream's L and R
-  inputs. **Mono** uses the measurement channel only. The measurement must be switched on.
+- **Settings:** click the chart; its settings appear in the bottom bar: **measurement**,
+  **channels** (Stereo/Mono), **target** and **reset**. The chart itself shows the
+  measurement's name, the channel mode and the target as a heading.
+- **Source:** the measurement's **measurement channel is Left** and its **reference channel
+  is Right**, so set those to the stream's L and R inputs. **Mono** uses the measurement
+  channel only. The measurement must be switched on.
 - **Bars:** sample peak per channel in dBFS (-60 to 0) with a 2 s peak hold. Green below
   -18, amber to -6, red above. Under each bar: the maximum **true peak** (dBTP) since reset,
   red above -1 dBTP.

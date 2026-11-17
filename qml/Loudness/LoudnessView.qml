@@ -22,6 +22,7 @@ import QtQuick.Controls.Material 2.12
 import OpenSoundMeter 1.0
 import SourceModel 1.0
 import "../elements"
+import "../"
 
 /**
  * Loudness chart (EBU R 128): L/R peak meters (dBFS) and programme loudness (LUFS).
@@ -41,6 +42,28 @@ Item {
     property var values: ({})
     property var measurement: null
     readonly property bool available: measurement !== null && typeof measurement.loudness === "function"
+
+    //! spacing that scales with the chart
+    readonly property real margin: Math.max(10, Math.min(28, Math.min(width, height) * 0.03))
+
+    // used by LoudnessProperties.qml in the bottom bar
+    function chooseSource(id) {
+        if (settings) settings.setValue("loudness/source", id);
+        chosenId = id;
+        resolve();
+    }
+    function setTarget(t) {
+        if (settings) settings.setValue("loudness/target", t);
+        target = t;
+    }
+    function setMono(mono) {
+        if (available) measurement.loudnessMono = mono;
+    }
+    function resetProgramme() {
+        if (available) measurement.resetLoudness();
+        leftBar.reset();
+        rightBar.reset();
+    }
 
     readonly property color textColor: applicationAppearance.darkMode ? "#EEEEEE" : "#202020"
     readonly property color dimColor: applicationAppearance.darkMode ? "#9E9E9E" : "#616161"
@@ -118,88 +141,54 @@ Item {
         }
     }
 
-    // ------------------------------------------------------------ controls
-    RowLayout {
-        id: controls
+    // ------------------------------------------------------------ header
+    // settings live in the bottom bar (LoudnessProperties.qml): click the chart
+    PropertiesOpener {
+        id: opener
+        pushObject: view
+        propertiesQml: "qrc:/Loudness/LoudnessProperties.qml"
+        onClicked: open()
+    }
+
+    Column {
+        id: header
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.rightMargin: 150    // the chart type selector sits top right
-        anchors.leftMargin: 6
-        spacing: 6
-        height: Material.buttonHeight
+        anchors.topMargin: view.margin * 0.6
+        anchors.leftMargin: view.margin
+        anchors.rightMargin: 160    // the chart type selector sits top right
+        spacing: 2
 
-        DropDown {
-            id: sourceSelect
-            Layout.preferredWidth: 170
-            model: SourceModel {
-                unrollGroups: true
-                list: sourceList
-            }
-            textRole: "title"
-            valueRole: "source"
-            currentIndex: view.sourceId !== undefined ? model.indexOf(view.sourceId) : -1
-            displayText: currentIndex >= 0 ? currentText : qsTr("choose measurement")
-            onActivated: function(index) {
-                var id = model.get(index);
-                if (view.settings) view.settings.setValue("loudness/source", id);
-                view.chosenId = id;
-                view.resolve();
-            }
-            ToolTip.visible: hovered
-            ToolTip.text: qsTr("measurement to read: its measurement channel is Left, its reference channel Right")
+        Label {
+            width: parent.width
+            elide: Text.ElideRight
+            text: view.available ? view.measurement.name : qsTr("Loudness")
+            color: view.textColor
+            font.pixelSize: Math.max(15, Math.min(24, view.height * 0.035))
+            font.bold: true
         }
-
-        DropDown {
-            Layout.preferredWidth: 100
-            enabled: view.available
-            model: [qsTr("Stereo"), qsTr("Mono")]
-            currentIndex: view.available && view.measurement.loudnessMono ? 1 : 0
-            onActivated: function(index) {
-                if (view.available) view.measurement.loudnessMono = (index === 1);
-            }
-            ToolTip.visible: hovered
-            ToolTip.text: qsTr("Stereo: measurement channel = L, reference channel = R. Mono: measurement channel only")
+        Label {
+            width: parent.width
+            elide: Text.ElideRight
+            color: view.dimColor
+            font.pixelSize: Math.max(11, Math.min(15, view.height * 0.022))
+            text: view.available ?
+                      (view.measurement.loudnessMono ? qsTr("Mono") : qsTr("Stereo")) +
+                      "  ·  " + qsTr("target %1 LUFS").arg(Math.round(view.target)) :
+                      qsTr("click to choose a measurement")
         }
-
-        DropDown {
-            Layout.preferredWidth: 150
-            model: ["-14 LUFS", "-16 LUFS", "-18 LUFS", "-23 LUFS", "-24 LUFS"]
-            currentIndex: model.indexOf(Math.round(view.target) + " LUFS")
-            onActivated: function(index) {
-                var t = parseInt(model[index]);
-                if (view.settings) view.settings.setValue("loudness/target", t);
-                view.target = t;
-            }
-            ToolTip.visible: hovered
-            ToolTip.text: qsTr("target: integrated loudness turns green within 1 LU, amber within 3 LU")
-        }
-
-        Button {
-            text: qsTr("Reset")
-            flat: true
-            enabled: view.available
-            onClicked: {
-                view.measurement.resetLoudness();
-                leftBar.reset();
-                rightBar.reset();
-            }
-            ToolTip.visible: hovered
-            ToolTip.text: qsTr("start a new programme: clears integrated, range and true peak")
-        }
-
-        Item { Layout.fillWidth: true }
     }
 
     // ------------------------------------------------------------ meters and numbers
     Item {
         id: body
-        anchors.top: controls.bottom
+        anchors.top: header.bottom
         anchors.bottom: parent.bottom
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.margins: 10
-        anchors.bottomMargin: 34   // keep clear of the pop-out button
+        anchors.margins: view.margin
+        anchors.bottomMargin: Math.max(34, view.margin)   // keep clear of the pop-out button
         visible: view.available
 
         // L/R bars with a dBFS scale
@@ -214,7 +203,19 @@ Item {
             readonly property real barHeight: height - labelHeight
             readonly property bool mono: view.values.mono === true
             readonly property real barWidth: mono ? width - dbScale.width - 6 : (width - dbScale.width - 6 - 8) / 2
-            readonly property var ticks: [0, -3, -6, -9, -12, -18, -24, -30, -40, -50, -60]
+            readonly property var allTicks: [0, -3, -6, -9, -12, -18, -24, -30, -40, -50, -60]
+            //! only labels at least ~16 px apart, so short bars don't get a pile-up at the top
+            readonly property var ticks: {
+                var kept = [], lastY = -1000, range = leftBar.maximum - leftBar.minimum;
+                for (var i = 0; i < allTicks.length; ++i) {
+                    var y = barHeight * (leftBar.maximum - allTicks[i]) / range;
+                    if (y - lastY >= 16 || i === allTicks.length - 1 && barHeight - lastY >= 10) {
+                        kept.push(allTicks[i]);
+                        lastY = y;
+                    }
+                }
+                return kept;
+            }
 
             Item {
                 id: dbScale
@@ -306,7 +307,9 @@ Item {
                             text: view.lufs(view.values[modelData.key])
                             font.pixelSize: numbers.big
                             font.bold: true
-                            color: modelData.target ? view.targetColor(view.values[modelData.key]) : view.textColor
+                            color: !view.finite(view.values[modelData.key]) || view.values[modelData.key] <= -70 ? view.dimColor :
+                                   (modelData.target ? view.targetColor(view.values[modelData.key]) : view.textColor)
+                            opacity: view.finite(view.values[modelData.key]) && view.values[modelData.key] > -70 ? 1 : 0.4
                         }
                         Label {
                             y: bigValue.baselineOffset - baselineOffset
@@ -366,7 +369,7 @@ Item {
         visible: !view.available
         horizontalAlignment: Text.AlignHCenter
         color: view.dimColor
-        text: qsTr("Choose a measurement above.\nIts measurement channel is read as Left and its reference channel as Right.")
+        text: qsTr("Click here to choose a measurement.\nIts measurement channel is read as Left and its reference channel as Right.")
     }
     Label {
         anchors.centerIn: parent

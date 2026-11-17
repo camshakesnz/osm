@@ -169,10 +169,15 @@ Settings *VariableChart::settings() const noexcept
 }
 void VariableChart::setSettings(Settings *settings) noexcept
 {
+    if (m_settings == settings) {
+        return;
+    }
     m_settings = settings;
     if (m_plot) {
         m_plot->setSettings(m_settings);
     }
+    // QML bindings to chart.settings (e.g. the Loudness view) need this
+    emit settingsChanged();
 }
 void VariableChart::removeDataSource(const Shared::Source &source)
 {

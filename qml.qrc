@@ -57,6 +57,7 @@
         <file alias="SPL/Grid.qml">qml/SPL/Grid.qml</file>
         <file alias="Loudness/LoudnessView.qml">qml/Loudness/LoudnessView.qml</file>
         <file alias="Loudness/LevelBar.qml">qml/Loudness/LevelBar.qml</file>
+        <file alias="Loudness/LoudnessProperties.qml">qml/Loudness/LoudnessProperties.qml</file>
         <file alias="SPL/Meter.qml">qml/SPL/Meter.qml</file>
         <file alias="SPL/MeterProperties.qml">qml/SPL/MeterProperties.qml</file>
         <file alias="source/Filter.qml">qml/source/Filter.qml</file>
