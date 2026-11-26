@@ -19,94 +19,184 @@ import QtQuick 2.7
 import QtQuick.Controls 1.4 //SplitView needs exactly 1.4
 import QtQuick.Layouts 1.3
 
+/**
+ * The charts area. Each view (e.g. "Live", "TF") keeps its own charts, types and
+ * chart settings under views/<id>/charts; switching views rebuilds the charts
+ * from that group, so the views never change each other.
+ */
 Item {
     id: chartsLayout
-    property int count: applicationSettings.value("layout/charts/count", 1)
+    //! current view id; empty uses the old single layout (layout/charts)
+    property string viewId: ""
+    //! settings group of the current view's charts (set by loadView)
+    property string prefix: "layout/charts"
+    property int count: 1
+    property bool loading: false
+    //! the view has no stored chart heights yet (first time it is opened)
+    property bool needsAutoHeight: false
 
-    Component.onCompleted: {
-        chartsLayout.onCountChanged.connect(updateCount);
+    function groupFor(index) {
+        return prefix + "/" + index;
+    }
+
+    //! rebuild the charts for the current view
+    function loadView() {
+        if (loader.item) {
+            // take the old charts off screen first and build the new ones a moment
+            // later, so the render thread has finished with the old ones
+            loader.item.visible = false;
+            reloadTimer.restart();
+            return;
+        }
+        buildView();
+    }
+
+    function buildView() {
+        loading = true;
+        prefix = viewId ? "views/" + viewId + "/charts" : "layout/charts";
+        needsAutoHeight = (applicationSettings.value(prefix + "/sized") === undefined);
+        count = Math.max(1, Math.min(3, Number(applicationSettings.value(prefix + "/count", 1))));
+        loader.active = false;
+        loader.active = true;
+        loading = false;
+    }
+
+    Timer {
+        id: reloadTimer
+        interval: 80
+        repeat: false
+        onTriggered: chartsLayout.buildView()
     }
 
     function autoHeight() {
-        first.height = second.height = third.height = chartsLayout.height / count;
+        if (loader.item) {
+            loader.item.autoHeight();
+        }
     }
 
-    function updateCount() {
+    onViewIdChanged: loadView()
+    onCountChanged: {
+        if (loading) {
+            return;
+        }
+        applicationSettings.setValue(prefix + "/count", count);
         autoHeight();
-        applicationSettings.setValue("layout/charts/count", count)
+    }
+    Component.onCompleted: {
+        if (!loader.active) {
+            loadView();
+        }
     }
 
-    SplitView {
-        id: sv
+    Loader {
+        id: loader
         anchors.fill: parent
-        orientation: Qt.Vertical
-        readonly property int minimunHeight: 100
+        active: false
+        sourceComponent: splitComponent
+    }
 
-         Chart {
-             id: first
-             Layout.fillWidth: true
-             Layout.minimumHeight: sv.minimunHeight
-             Layout.preferredWidth: parent.width
-             Layout.fillHeight: true
-             height: applicationSettings.value("layout/charts/1/height")
-             onHeightChanged: applicationSettings.setValue("layout/charts/1/height", height)
-             type: applicationSettings.value("layout/charts/1/type", "Spectrum")
-             onTypeChanged: applicationSettings.setValue("layout/charts/1/type", type)
+    Component {
+        id: splitComponent
 
-             settingsGroup: "layout/charts/1"
-             Component.onCompleted: {
-                 settings = applicationSettings.getGroup("layout/charts/1");
-             }
-         }
+        SplitView {
+            id: sv
+            orientation: Qt.Vertical
+            readonly property int minimunHeight: 100
 
-         Chart {
-             id: second
-             visible: chartsLayout.count > 1
-             Layout.fillWidth: true
-             Layout.minimumHeight: sv.minimunHeight
-             Layout.preferredWidth: parent.width
-             height: applicationSettings.value("layout/charts/2/height")
-             onHeightChanged: applicationSettings.setValue("layout/charts/2/height", height)
-             type: applicationSettings.value("layout/charts/2/type", "Spectrum")
-             onTypeChanged: applicationSettings.setValue("layout/charts/2/type", type)
+            function autoHeight() {
+                // optional starting proportions for a view, e.g. "0.42,0.38,0.2"
+                var stored = applicationSettings.value(chartsLayout.prefix + "/weights");
+                var weights = String(stored === undefined ? "" : stored).split(",")
+                    .map(function(w) { return Number(w); })
+                    .filter(function(w) { return w > 0; });
+                var charts = [first, second, third];
+                var total = 0;
+                for (var i = 0; i < chartsLayout.count; ++i) {
+                    total += (weights.length === 3 ? weights[i] : 1);
+                }
+                for (var j = 0; j < charts.length; ++j) {
+                    var w = (weights.length === 3 ? weights[j] : 1);
+                    charts[j].height = Math.max(minimunHeight, sv.height * w / total);
+                }
+            }
 
-             settingsGroup: "layout/charts/2"
-             Component.onCompleted: {
-                 settings = applicationSettings.getGroup("layout/charts/2");
-             }
-         }
+            // a view opened for the first time gets its starting proportions once it has a size
+            property bool pendingAutoHeight: chartsLayout.needsAutoHeight
+            function applyPendingHeight() {
+                if (pendingAutoHeight && sv.height > 3 * minimunHeight) {
+                    pendingAutoHeight = false;
+                    autoHeight();
+                    applicationSettings.setValue(chartsLayout.prefix + "/sized", true);
+                }
+            }
+            onHeightChanged: applyPendingHeight()
+            Component.onCompleted: Qt.callLater(applyPendingHeight)
 
-         Chart {
-             id: third
-             visible: chartsLayout.count > 2
-             Layout.fillWidth: true
-             Layout.minimumHeight: sv.minimunHeight
-             Layout.preferredWidth: parent.width
-             height: applicationSettings.value("layout/charts/3/height")
-             onHeightChanged: applicationSettings.setValue("layout/charts/3/height", height)
-             type: applicationSettings.value("layout/charts/3/type", "Spectrum")
-             onTypeChanged: applicationSettings.setValue("layout/charts/3/type", type)
+            Chart {
+                id: first
+                Layout.fillWidth: true
+                Layout.minimumHeight: sv.minimunHeight
+                Layout.preferredWidth: parent.width
+                Layout.fillHeight: true
+                height: applicationSettings.value(chartsLayout.groupFor(1) + "/height", 300)
+                onHeightChanged: applicationSettings.setValue(chartsLayout.groupFor(1) + "/height", height)
+                type: applicationSettings.value(chartsLayout.groupFor(1) + "/type", "Spectrum")
+                onTypeChanged: applicationSettings.setValue(chartsLayout.groupFor(1) + "/type", type)
 
-             settingsGroup: "layout/charts/3"
-             Component.onCompleted: {
-                 settings = applicationSettings.getGroup("layout/charts/3");
-             }
-         }
+                settingsGroup: chartsLayout.groupFor(1)
+                Component.onCompleted: {
+                    settings = applicationSettings.getGroup(chartsLayout.groupFor(1));
+                }
+            }
 
-         SystemPalette { id: pal }
-         handleDelegate: Rectangle {
-             width: 1
-             height: 1
-             color: Qt.darker(pal.window, 1.5)
+            Chart {
+                id: second
+                visible: chartsLayout.count > 1
+                Layout.fillWidth: true
+                Layout.minimumHeight: sv.minimunHeight
+                Layout.preferredWidth: parent.width
+                height: applicationSettings.value(chartsLayout.groupFor(2) + "/height", 300)
+                onHeightChanged: applicationSettings.setValue(chartsLayout.groupFor(2) + "/height", height)
+                type: applicationSettings.value(chartsLayout.groupFor(2) + "/type", "Spectrum")
+                onTypeChanged: applicationSettings.setValue(chartsLayout.groupFor(2) + "/type", type)
 
-             MouseArea {
-                 anchors.fill: parent
-                 propagateComposedEvents: true
-                 onDoubleClicked: {
-                     autoHeight();
-                 }
-             }
-         }
-     }
+                settingsGroup: chartsLayout.groupFor(2)
+                Component.onCompleted: {
+                    settings = applicationSettings.getGroup(chartsLayout.groupFor(2));
+                }
+            }
 
+            Chart {
+                id: third
+                visible: chartsLayout.count > 2
+                Layout.fillWidth: true
+                Layout.minimumHeight: sv.minimunHeight
+                Layout.preferredWidth: parent.width
+                height: applicationSettings.value(chartsLayout.groupFor(3) + "/height", 300)
+                onHeightChanged: applicationSettings.setValue(chartsLayout.groupFor(3) + "/height", height)
+                type: applicationSettings.value(chartsLayout.groupFor(3) + "/type", "Spectrum")
+                onTypeChanged: applicationSettings.setValue(chartsLayout.groupFor(3) + "/type", type)
+
+                settingsGroup: chartsLayout.groupFor(3)
+                Component.onCompleted: {
+                    settings = applicationSettings.getGroup(chartsLayout.groupFor(3));
+                }
+            }
+
+            SystemPalette { id: pal }
+            handleDelegate: Rectangle {
+                width: 1
+                height: 1
+                color: Qt.darker(pal.window, 1.5)
+
+                MouseArea {
+                    anchors.fill: parent
+                    propagateComposedEvents: true
+                    onDoubleClicked: {
+                        sv.autoHeight();
+                    }
+                }
+            }
+        }
+    }
 }

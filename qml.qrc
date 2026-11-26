@@ -5,7 +5,6 @@
         <file alias="source/Measurement.qml">qml/source/Measurement.qml</file>
         <file alias="Chart.qml">qml/Chart.qml</file>
         <file alias="Charts.qml">qml/Charts.qml</file>
-        <file alias="SideBar.qml">qml/SideBar.qml</file>
         <file alias="GeneratorProperties.qml">qml/GeneratorProperties.qml</file>
         <file alias="PropetiesBar.qml">qml/PropetiesBar.qml</file>
         <file alias="PropertiesOpener.qml">qml/PropertiesOpener.qml</file>
@@ -27,6 +26,11 @@
         <file alias="Plot/GroupDelayProperties.qml">qml/Plot/GroupDelayProperties.qml</file>
         <file alias="Calculator.qml">qml/Calculator.qml</file>
         <file alias="PopoutWindow.qml">qml/PopoutWindow.qml</file>
+        <file alias="LiveBar.qml">qml/LiveBar.qml</file>
+        <file alias="DataBar.qml">qml/DataBar.qml</file>
+        <file alias="ViewBar.qml">qml/ViewBar.qml</file>
+        <file alias="elements/MiniButton.qml">qml/elements/MiniButton.qml</file>
+        <file alias="elements/ValueBox.qml">qml/elements/ValueBox.qml</file>
         <file alias="Shortcuts.qml">qml/Shortcuts.qml</file>
         <file alias="source/Union.qml">qml/source/Union.qml</file>
         <file alias="source/UnionProperties.qml">qml/source/UnionProperties.qml</file>

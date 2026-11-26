@@ -19,6 +19,7 @@
 #define SPECTROGRAMPLOT_H
 
 #include "frequencybasedplot.h"
+#include "spectrogrampalette.h"
 
 namespace Chart {
 class SpectrogramPlot : public FrequencyBasedPlot
@@ -28,6 +29,8 @@ class SpectrogramPlot : public FrequencyBasedPlot
     Q_PROPERTY(int mid READ mid WRITE setMid NOTIFY midChanged)
     Q_PROPERTY(int max READ max WRITE setMax NOTIFY maxChanged)
     Q_PROPERTY(bool active READ active WRITE setActive NOTIFY activeChanged)
+    //! 0: heat (black, blue, green, red, white), 1: classic
+    Q_PROPERTY(int colorScheme READ colorScheme WRITE setColorScheme NOTIFY colorSchemeChanged)
 
 public:
     SpectrogramPlot(Settings *settings, QQuickItem *parent = Q_NULLPTR);
@@ -44,6 +47,9 @@ public:
     void setMax(int max);
 
     bool active() const;
+    int colorScheme() const;
+    QColor plotAreaColor() const override;
+    void setColorScheme(int scheme);
     void setActive(bool active);
 
 signals:
@@ -51,12 +57,14 @@ signals:
     void midChanged(int);
     void maxChanged(int);
     void activeChanged(bool);
+    void colorSchemeChanged(int);
 
 protected:
     virtual SeriesItem *createSeriesFromSource(const Shared::Source &source) override;
 
     int m_min, m_mid, m_max;
     bool m_active;
+    int m_colorScheme;
 };
 }
 #endif // SPECTROGRAMPLOT_H

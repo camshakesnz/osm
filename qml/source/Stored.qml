@@ -53,7 +53,9 @@ Item {
 
             Label {
                 Layout.fillWidth: true
+                Layout.rightMargin: 56 // clear of the settings / delete buttons
                 font.bold: highlight
+                elide: Text.ElideRight
                 text:  (dataModelData ? dataModelData.name : "")
             }
 

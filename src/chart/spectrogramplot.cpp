@@ -20,7 +20,7 @@
 using namespace Chart;
 
 SpectrogramPlot::SpectrogramPlot(Settings *settings, QQuickItem *parent): FrequencyBasedPlot(settings, parent),
-    m_min(-90), m_mid(-50), m_max(10), m_active(true)
+    m_min(-90), m_mid(-50), m_max(10), m_active(true), m_colorScheme(0)
 {
     m_y.configure(AxisType::Linear, 0.f,    4.f,  4);
     setPointsPerOctave(48);
@@ -42,6 +42,8 @@ void SpectrogramPlot::setSettings(Settings *settings) noexcept
                                                         m_mid).toInt());
     setMax(m_settings->reactValue<SpectrogramPlot, int>("dBMax", this, &SpectrogramPlot::maxChanged,
                                                         m_max).toInt());
+    setColorScheme(m_settings->reactValue<SpectrogramPlot, int>("colors", this, &SpectrogramPlot::colorSchemeChanged,
+                                                            m_colorScheme).toInt());
 }
 
 void SpectrogramPlot::storeSettings() noexcept
@@ -54,6 +56,27 @@ void SpectrogramPlot::storeSettings() noexcept
     m_settings->setValue("dBMin", m_min);
     m_settings->setValue("dBMid", m_mid);
     m_settings->setValue("dBMax", m_max);
+    m_settings->setValue("colors", m_colorScheme);
+}
+
+int SpectrogramPlot::colorScheme() const
+{
+    return m_colorScheme;
+}
+
+void SpectrogramPlot::setColorScheme(int scheme)
+{
+    if (m_colorScheme != scheme) {
+        m_colorScheme = scheme;
+        emit colorSchemeChanged(m_colorScheme);
+        update();
+    }
+}
+
+QColor SpectrogramPlot::plotAreaColor() const
+{
+    // heat colours start from black, like Smaart's spectrograph
+    return m_colorScheme == SpectrogramPalette::Heat ? QColor(Qt::black) : QColor();
 }
 
 int SpectrogramPlot::max() const

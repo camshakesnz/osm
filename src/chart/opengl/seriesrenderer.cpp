@@ -67,7 +67,7 @@ void SeriesRenderer::synchronize(QQuickFramebufferObject *item)
     bool reset = false;
     if (item) {
         auto seriesFBO = dynamic_cast<SeriesFBO *>(item);
-        if (seriesFBO && (m_source = seriesFBO->source()) && seriesFBO->parentItem()) {
+        if (seriesFBO && (m_source = seriesFBO->source()) && seriesFBO->parentItem() && m_item->window()) {
             qreal retinaScale = m_item->window()->devicePixelRatio();
             m_width  = static_cast<GLsizei>(m_item->width() * retinaScale);
             m_height = static_cast<GLsizei>(m_item->height() * retinaScale);
@@ -180,6 +180,11 @@ void SeriesRenderer::render()
     }
 
     auto plot = static_cast<Chart::Plot *>(m_item->parent());
+    // the chart can be taken out of the window (view switched, type changed) while
+    // the render thread is still drawing its last frame
+    if (!plot || !plot->window()) {
+        return;
+    }
     if (!m_program.isLinked()) {
         qDebug() << QString("shader not setted or linked");
         return;
@@ -215,7 +220,9 @@ void SeriesRenderer::render()
     }
 
     m_program.release();
-    plot->window()->resetOpenGLState();
+    if (auto window = plot->window()) {
+        window->resetOpenGLState();
+    }
 }
 void SeriesRenderer::setWeight(unsigned int weight)
 {

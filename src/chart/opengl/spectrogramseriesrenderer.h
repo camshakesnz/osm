@@ -47,6 +47,7 @@ protected:
 
 private:
     int m_min, m_mid, m_max;
+    int m_colorScheme = 0;
     unsigned int m_pointsPerOctave;
     QElapsedTimer m_timer;
 

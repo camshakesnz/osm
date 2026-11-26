@@ -876,8 +876,25 @@ void SourceList::storeItem(const Shared::Source &item)
 
     if (newItem) {
         newItem->setActive(true);
-        appendItem(newItem, true);
+        appendCapture(newItem);
     }
+}
+
+void SourceList::appendCapture(const Shared::Source &item)
+{
+    if (!item) {
+        return;
+    }
+    if (m_captureList && m_captureList != this) {
+        m_captureList->appendItem(item, true);
+    } else {
+        appendItem(item, true);
+    }
+}
+
+void SourceList::setCaptureList(SourceList *list)
+{
+    m_captureList = list;
 }
 QColor SourceList::nextColor()
 {

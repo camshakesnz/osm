@@ -70,13 +70,13 @@ Code: `src/math/chirpsignal.h` (shared stimulus definition), `src/math/chirpanal
 Any chart can be opened in its own window, for example the **numeric meters on a
 second display** while the main window keeps the graphs.
 
-- Click **↗** in the bottom right corner of a chart to open that chart in a new window, with the
+- Click **↗** in the bottom left corner of a chart (next to its ⚙) to open that chart in a new window, with the
   same settings (for Numeric: the same meter layout and sources).
   Or **View → New window (meters)** (Ctrl+Shift+M) opens a fresh Numeric window.
 - A new window opens on another display if there is one.
 - The **⤢** button in the bottom right corner (or F11) toggles full screen; Esc leaves full screen.
 - The chart type and its settings can be changed inside the window as normal; clicking
-  a meter or chart opens its properties in the main window.
+  a meter opens its settings, and a chart's ⚙ opens its settings, in the main window.
 - Open windows, with their size, position, full screen state and settings, come back on
   the next start. Closing a window forgets it.
 
@@ -107,3 +107,47 @@ like a simple loudness meter plug-in, inside OSM.
 
 Verified against the EBU Tech 3341 (loudness, gating) and Tech 3342 (range) test cases at
 44.1, 48 and 96 kHz: `tests/loudness/loudness_test.cpp`.
+
+# Layout
+
+The window is laid out in the style of Smaart:
+
+- **Left: data bar.** Captured (stored) traces, folders, averages/math, filters and EQ, with
+  buttons for *Folder*, *Import*, *Open* and *Save* along the bottom and *Capture* (store every
+  active measurement, Ctrl+X) at the top. Double-click a folder to open it; while a folder is
+  open, new captures (including chirp auto-store) go into it. *‹ Back* returns to the top level.
+  Hide or show the bar with *Data* (top right), Ctrl+B or View → Data bar. It hides itself when
+  the window is narrower than about 980 px.
+- **Right: live measurements and the generator.** Each measurement block shows M (measurement)
+  and R (reference) input meters, and quick controls:
+  - **delay** in ms: click to type a value, or scroll (Shift scrolls in 0.01 ms steps);
+  - **Find**: set the delay to the current estimate (the tooltip shows it);
+  - **Track**: follow the delay automatically. It only moves the delay when the estimate stands
+    well clear of the noise and the last two estimates agree (within 0.25 ms); the button is amber
+    while it waits for that and green when locked. In chirp modes it follows each completed set.
+  - **gain** − / + (1 dB, Shift 0.1 dB), or type/scroll the value.
+  The signal generator block sits at the bottom: type, On/Off (Ctrl+G) and level − / +
+  (Shift: 6 dB steps).
+- **Settings** open in a floating window from the **⚙** buttons (each measurement, the generator,
+  each chart's bottom-left corner, folders). Drag it by its title bar; Esc or ✕ closes it. While
+  it is open, clicking another chart or measurement switches it to that item. *Dock* puts the
+  settings back along the bottom of the window permanently (*Float* undoes it).
+
+## Views
+
+The buttons at the top right are views. Each view keeps its own charts: how many, their types and
+all their settings. Two are made for you:
+
+- **Live**: spectrum (RTA), spectrograph and one big SPL meter;
+- **TF**: impulse, phase and magnitude.
+
+If you had charts set up before, they are kept as a third view, *My layout*. *+* adds a view
+(a copy of the current one); right-click a view to rename, duplicate or delete it. Space flips
+between the last two views and Alt+1…6 picks a view. Ctrl+1/2/3 set the number of charts in
+the current view.
+
+## Spectrograph colours
+
+The spectrograph now uses heat colours by default: nothing (black) below the *min* level, then
+blue, green at *mid*, yellow, red, and white at *max*. Set min/mid/max in the chart's settings to
+suit the level of what you are measuring. *colours: classic* brings back the original look.

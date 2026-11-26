@@ -441,7 +441,7 @@ Item {
         var stored = dataObjectData.store();
         if (stored) {
             stored.data.active = true;
-            sourceList.appendItem(stored, true);
+            sourceList.appendCapture(stored);
         }
     }
 }

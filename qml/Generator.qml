@@ -15,99 +15,140 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-import QtQuick 2.7
+import QtQuick 2.15
 import QtQuick.Window 2.2
-import QtQuick.Controls 2.2
+import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.12
-import QtQuick.Controls.Material 2.2
+import QtQuick.Controls.Material 2.15
 import "elements"
 
+/**
+ * Signal generator block (bottom of the right side): type, level, on/off.
+ * The gear opens the full generator settings (frequencies, channels, chirps...).
+ */
 Item {
+    id: generatorBlock
     property bool remoteControlled : remoteClient.controlledGenerator && remoteClient.controlledGenerator.data
     property var currentGenerator : (remoteClient.controlledGenerator && remoteClient.controlledGenerator.data ? remoteClient.controlledGenerator.data : generatorModel)
+    readonly property color base: Material.foreground
 
+    implicitHeight: column.implicitHeight + 14
+    width: parent ? parent.width : 0
 
-    height: remoteControlled ? 40 : 57
-    width: parent.width
+    function setGain(value) {
+        currentGenerator.gain = Math.round(Math.max(-140, Math.min(0, value)));
+    }
+
+    Rectangle {
+        anchors.fill: parent
+        anchors.margins: 3
+        radius: 4
+        color: Qt.rgba(base.r, base.g, base.b, 0.03)
+        border.width: 1
+        border.color: currentGenerator.enabled ? Material.color(Material.Red) : Qt.rgba(base.r, base.g, base.b, 0.18)
+    }
 
     ColumnLayout {
-        anchors.fill: parent
+        id: column
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.leftMargin: 10
         anchors.rightMargin: 10
+        anchors.topMargin: 7
+        spacing: 4
 
         RowLayout {
-            spacing: 0
-            Layout.preferredHeight: 40
-
-            Switch {
-                id: onoff
-                Layout.alignment: Qt.AlignCenter
-
-                checked: currentGenerator.enabled
-                onCheckedChanged: currentGenerator.enabled = checked
-            }
+            Layout.fillWidth: true
+            spacing: 4
 
             Label {
-                id: label
-                Layout.alignment: Qt.AlignCenter
-                text:  qsTr("Generator")
-
-                PropertiesOpener {
-                   propertiesQml: "qrc:/GeneratorProperties.qml"
-                   onClicked: {
-                       open();
-                   }
-                }
-            }
-
-            Rectangle {
-                width: 15
-                height: label.implicitHeight
-                color: "transparent"
                 Layout.fillWidth: true
-                Layout.alignment: Qt.AlignCenter
+                text: qsTr("Signal generator")
+                font.bold: true
+                elide: Text.ElideRight
             }
 
-            FloatSpinBox {
-                id: gainSpinBox
-                value: currentGenerator.gain
-                onValueChanged: currentGenerator.gain = value
-                Layout.alignment: Qt.AlignCenter
+            MiniButton {
+                Layout.preferredWidth: 26
+                text: "⚙"
+                font.pixelSize: 14
+                tooltip: qsTr("generator settings")
+                onClicked: applicationWindow.properiesbar.open(generatorBlock, "qrc:/GeneratorProperties.qml", qsTr("Signal generator"))
+            }
+        }
 
-                decimals: 0
-                from: -90
-                step: 1
-                to: 0
-                units: "dB"
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 4
 
-                editable: true
-                indicators: false
-                background: false
+            DropDown {
+                id: typeSelect
+                Layout.fillWidth: true
+                Layout.preferredHeight: 34
+                topInset: 0
+                bottomInset: 0
+                model: generatorModel.types
+                currentIndex: currentGenerator.type
+                onActivated: currentGenerator.type = currentIndex
+                font.pixelSize: 12
+                ToolTip.visible: hovered
+                ToolTip.text: qsTr("signal type")
+                ToolTip.delay: 600
+            }
 
-                width: 45
-                bottomPadding: 8
-                fontSize: label.font.pixelSize
+            MiniButton {
+                Layout.preferredWidth: 44
+                Layout.preferredHeight: 28
+                text: currentGenerator.enabled ? qsTr("On") : qsTr("Off")
+                font.bold: true
+                checked: currentGenerator.enabled
+                checkedColor: Material.color(Material.Red)
+                textColor: currentGenerator.enabled ? "white" : Material.foreground
+                color: currentGenerator.enabled ? Material.color(Material.Red) :
+                                                  Qt.rgba(base.r, base.g, base.b, hovered ? 0.14 : 0.06)
+                tooltip: qsTr("generator on/off (Ctrl+G)")
+                onClicked: currentGenerator.enabled = !currentGenerator.enabled
+            }
+        }
 
-                Connections {
-                    target: currentGenerator
-                    function onGainChanged() {
-                        gainSpinBox.value = currentGenerator.gain;
-                    }
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 4
+
+            Label {
+                text: qsTr("level")
+                font.pixelSize: 11
+                opacity: 0.7
+            }
+            Item { Layout.fillWidth: true }
+            MiniButton {
+                Layout.preferredWidth: 24
+                text: "−"
+                tooltip: qsTr("level −1 dB (Shift: −6 dB)")
+                onClicked: function(m) { generatorBlock.setGain(currentGenerator.gain - ((m.modifiers & Qt.ShiftModifier) ? 6 : 1)); }
+            }
+            ValueBox {
+                Layout.preferredWidth: 54
+                displayText: Math.round(currentGenerator.gain) + " dB"
+                tooltip: qsTr("generator level, dBFS")
+                onAccepted: function(text) {
+                    var v = parseFloat(String(text).replace(/dB|db/g, "").replace(",", "."));
+                    if (!isNaN(v)) generatorBlock.setGain(v);
                 }
+                onStepped: function(steps, fine) { generatorBlock.setGain(currentGenerator.gain + steps); }
             }
-
-            Shortcut {
-                sequence: "Ctrl+G"
-                onActivated: currentGenerator.enabled = !currentGenerator.enabled;
+            MiniButton {
+                Layout.preferredWidth: 24
+                text: "+"
+                tooltip: qsTr("level +1 dB (Shift: +6 dB)")
+                onClicked: function(m) { generatorBlock.setGain(currentGenerator.gain + ((m.modifiers & Qt.ShiftModifier) ? 6 : 1)); }
             }
         }
 
         RowLayout {
             enabled: remoteControlled
             visible: remoteControlled
-
-            Item {
-                Layout.preferredWidth: 42
-            }
 
             Rectangle {
                 id: indicator
@@ -130,7 +171,7 @@ Item {
                 Connections {
                     target: remoteControlled ? currentGenerator : null
                     function onStateChanged() {
-                        color = indicator.updateColor();
+                        indicator.color = indicator.updateColor();
                     }
                 }
             }
@@ -141,6 +182,10 @@ Item {
                 text:  (remoteControlled && currentGenerator ? "@" + currentGenerator.host : "")
             }
         }
+    }
 
+    Shortcut {
+        sequence: "Ctrl+G"
+        onActivated: currentGenerator.enabled = !currentGenerator.enabled;
     }
 }

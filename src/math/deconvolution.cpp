@@ -17,6 +17,7 @@
  */
 #include "deconvolution.h"
 #include <complex>
+#include <cmath>
 Deconvolution::Deconvolution(unsigned int size) :
     m_size(size), m_maxIndex(0),
     m_norm(1),
@@ -61,13 +62,24 @@ void Deconvolution::transform(const FourierTransform *forward)
     m_ifft.transformSingleChannel();
 
     float max = 0;
+    double sum = 0;
     for (unsigned int i = 0; i < m_size; i++) {
         m_data[i] = m_ifft.af(i).real * m_norm;
+        if (std::isfinite(m_data[i])) {
+            sum += static_cast<double>(m_data[i]) * m_data[i];
+        }
         if (std::abs(m_data[i]) > max) {
             max = std::abs(m_data[i]);
             m_maxIndex = i;
         }
     }
+    double rms = m_size ? std::sqrt(sum / m_size) : 0.0;
+    m_peakRatio = rms > 0 ? static_cast<float>(max / rms) : 0.f;
+}
+
+float Deconvolution::peakRatio() const
+{
+    return m_peakRatio;
 }
 float Deconvolution::get(const unsigned int i) const
 {

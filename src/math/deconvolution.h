@@ -34,11 +34,14 @@ public:
     void setWindowFunctionType(WindowFunction::Type type);
 
     unsigned int maxIndex() const;
+    //! peak / rms of the last result: how clearly the peak stands out (1 = noise-like)
+    float peakRatio() const;
     unsigned int size() const;
 
 private:
     unsigned int m_size, m_maxIndex;
     float m_norm;
+    float m_peakRatio = 0.f;
     Container::array<float> m_data;
     FourierTransform m_fft, m_ifft;
 };

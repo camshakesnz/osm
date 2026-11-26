@@ -191,6 +191,7 @@ HEADERS += \
     src/chart/seriesesitem.h \
     src/chart/seriesitem.h \
     src/chart/spectrogramplot.h \
+    src/chart/spectrogrampalette.h \
     src/chart/stepplot.h \
     src/chart/coherenceplot.h \
     src/common/atomic.h \

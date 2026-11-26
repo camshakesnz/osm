@@ -15,6 +15,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#include "../spectrogrampalette.h"
 #include "spectrogramseriesrenderer.h"
 
 #include <QQuickWindow>
@@ -66,6 +67,7 @@ void SpectrogramSeriesRenderer::synchronize(QQuickFramebufferObject *item)
         m_min = plot->min();
         m_mid = plot->mid();
         m_max = plot->max();
+        m_colorScheme = plot->colorScheme();
         m_active = plot->active();
     }
 }
@@ -83,23 +85,12 @@ void SpectrogramSeriesRenderer::renderSeries()
         return;
 
     float floor = -140.f;
-    float alpha;
 
     historyRowData rowData;
     historyRow row;
     row.time = static_cast<int>(m_timer.restart());
     row.data.reserve(m_pointsPerOctave * 11);
     float value = 0.f;
-    static const QColor qred("#F44336"), qgreen("#8BC34A"), qblue("#2196F3");
-    QColor pointColor;
-
-    auto mix = [] (const QColor & first, const QColor & second, qreal k) {
-        QColor mixedColor;
-        mixedColor.setRedF(  k * (second.redF()   - first.redF())   + first.redF());
-        mixedColor.setBlueF( k * (second.blueF()  - first.blueF())  + first.blueF());
-        mixedColor.setGreenF(k * (second.greenF() - first.greenF()) + first.greenF());
-        return mixedColor;
-    };
     auto accumalte = [m_source = m_source, &value] (const unsigned int &i) {
         if (i == 0) {
             return ;
@@ -111,32 +102,17 @@ void SpectrogramSeriesRenderer::renderSeries()
 
         value = 10 * log10f(value) + LEVEL_NORMALIZATION;
 
-        alpha = 1.0f;
-        if (!std::isnormal(value) || value < floor) {
+        if (!std::isnormal(value)) {
             value = floor;
         }
-        if (value > m_max) {
-            value = m_max;
-        }
-
-        if (value < m_min) {
-            // transparent -> blue
-            pointColor = qblue;
-            alpha = (value - floor) / (m_min   - floor);
-        } else if (value < m_mid) {
-            // blue -> green
-            pointColor = mix(qblue, qgreen, static_cast<qreal>((value - m_min) / (m_mid - m_min)));
-        } else  {
-            // green -> red
-            pointColor = mix(qgreen, qred, static_cast<qreal>((value - m_mid) / (m_max - m_mid)));
-        }
-
+        const auto c = SpectrogramPalette::color(value, static_cast<float>(m_min), static_cast<float>(m_mid),
+                                                 static_cast<float>(m_max), m_colorScheme);
         historyPoint rgb;
         rgb[0] = (start + end) / 2.f;
-        rgb[1] = static_cast<float>(pointColor.redF());
-        rgb[2] = static_cast<float>(pointColor.greenF());
-        rgb[3] = static_cast<float>(pointColor.blueF());
-        rgb[4] = alpha;
+        rgb[1] = c.r;
+        rgb[2] = c.g;
+        rgb[3] = c.b;
+        rgb[4] = c.a;
         row.data.push_back(rgb);
 
         value = 0;

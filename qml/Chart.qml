@@ -261,7 +261,8 @@ Item {
 
             onClicked: function(e) {
                 if (mouseButtonClicked === Qt.LeftButton) {
-                    open();
+                    // switch the settings window to this chart if it is open; the gear opens it
+                    applicationWindow.properiesbar.follow(chart.plot, opener.propertiesQml, chart.type);
                 } else if (mouseButtonClicked === Qt.RightButton) {
                     openCalculator();
                 }
@@ -390,6 +391,7 @@ Item {
     }
 
     Loader {
+        id: loudnessLoader
         anchors.fill: parent
         active: chart.type == "Loudness"
         sourceComponent: Loudness.LoudnessView {
@@ -397,22 +399,56 @@ Item {
         }
     }
 
-    // bottom right corner: clear of the type selector and other controls along the top
+    //! open this chart's settings (the gear in the bottom right corner)
+    function openSettings() {
+        if (chart.type == "Loudness" && loudnessLoader.item) {
+            loudnessLoader.item.openSettings();
+        } else if (chart.plot && opener.propertiesQml) {
+            applicationWindow.properiesbar.open(chart.plot, opener.propertiesQml, chart.type);
+        }
+    }
+
+    Button {
+        id: settingsButton
+        visible: (chart.plot && opener.propertiesQml) || chart.type == "Loudness"
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.leftMargin: 2
+        anchors.bottomMargin: 0
+        z: 10
+        implicitWidth: 22
+        implicitHeight: 22
+        topInset: 0
+        bottomInset: 0
+        padding: 0
+        flat: true
+        text: "\u2699"
+        font.pixelSize: 14
+        opacity: hovered ? 1 : 0.45
+        onClicked: chartview.openSettings()
+        ToolTip.visible: hovered
+        ToolTip.text: qsTr("chart settings")
+        ToolTip.delay: 600
+    }
+
+    // bottom left corner, where the axes leave a free square: clear of the type
+    // selector along the top and of the frequency labels along the bottom
     Button {
         id: popOutButton
         visible: chartview.canPopOut
         anchors.bottom: parent.bottom
-        anchors.right: parent.right
-        anchors.margins: 2
+        anchors.left: settingsButton.visible ? settingsButton.right : parent.left
+        anchors.leftMargin: 2
+        anchors.bottomMargin: 0
         z: 10
-        implicitWidth: 30
-        implicitHeight: 30
+        implicitWidth: 22
+        implicitHeight: 22
         topInset: 0
         bottomInset: 0
         padding: 0
         flat: true
         text: "\u2197"
-        font.pixelSize: 15
+        font.pixelSize: 13
         opacity: hovered ? 1 : 0.45
         onClicked: applicationWindow.popOut(chart.type, chartview.settingsGroup)
         ToolTip.visible: hovered
@@ -421,6 +457,10 @@ Item {
 
     DropDown {
         id: typeSelect
+        // readable over the black heat-coloured spectrograph in light mode
+        Material.theme: applicationAppearance.darkMode ||
+                        (chart.type == "Spectrogram" && chart.plot && chart.plot.colorScheme === 0) ?
+                            Material.Dark : Material.Light
         anchors.top: parent.top
         anchors.right: parent.right
         implicitWidth: 145
@@ -442,7 +482,7 @@ Item {
                 chart.plot.selected = [sourceList.first];
             }
             if (chart.plot && reopen) {
-                pb.open(chart.plot, opener.propertiesQml);
+                pb.follow(chart.plot, opener.propertiesQml, chart.type);
             }
         }
         Component.onCompleted: {

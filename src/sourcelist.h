@@ -22,6 +22,7 @@
 #include <QVector>
 #include <QString>
 #include <QUrl>
+#include <QPointer>
 #include "abstract/source.h"
 #include "shared/source_shared.h"
 
@@ -133,6 +134,10 @@ public slots:
     Q_INVOKABLE void removeItem(const QUuid &uuid, bool deleteItem = true);
     Q_INVOKABLE void cloneItem(const Shared::Source &item);
     Q_INVOKABLE void storeItem(const Shared::Source &item);
+    //! add a captured (stored) result: into the capture folder if one is set, else here
+    Q_INVOKABLE void appendCapture(const Shared::Source &item);
+    //! folder (a group's list) that new captures go into; null for the top level
+    Q_INVOKABLE void setCaptureList(SourceList *list);
 
     //! store a measurement's result when its chirp set finishes (owning lists only,
     //! not the mirrored copies used by charts, or every result would be stored twice)
@@ -161,6 +166,7 @@ signals:
 private:
     void connectChirpStore(const Shared::Source &item);
     bool m_storeChirpSets = false;
+    QPointer<SourceList> m_captureList;
 
     bool loadList(const QJsonDocument &document, const QUrl &fileName) noexcept;
     template<typename T> bool loadObject(const QJsonObject &data, const SourceList *topList);

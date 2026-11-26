@@ -18,10 +18,20 @@
 import QtQuick 2.7
 import QtQuick.Controls 2.12
 
+/**
+ * Holds the settings of the selected item (measurement, chart, generator...).
+ * main.qml shows it in a floating settings window, or docked along the bottom.
+ */
 Item {
     property alias stack: propertiesStack
     property var currentObject : null
     property var currentQml : null
+    property string title: ""
+
+    //! the panel is on screen (docked, or the settings window is open)
+    property bool shown: false
+    //! main.qml makes the panel visible
+    signal showRequested()
 
     StackView {
         id: propertiesStack
@@ -54,18 +64,33 @@ Item {
             horizontalAlignment: Label.AlignHCenter
             verticalAlignment: Label.AlignVCenter
 
-            text: qsTr("Select an item in the right bar to change its properties")
+            text: qsTr("Click the \u2699 button on a measurement, chart or the generator to change its settings")
         }
     }
 
-    function open(pushObject, propertiesQml) {
+    function titleFor(pushObject, propertiesQml, explicitTitle) {
+        if (explicitTitle) {
+            return explicitTitle;
+        }
+        if (pushObject && pushObject.data && pushObject.data.name !== undefined) {
+            return pushObject.data.name;
+        }
+        if (propertiesQml) {
+            var name = String(propertiesQml).split("/").pop().replace(".qml", "").replace("Properties", "");
+            return name.replace(/([a-z])([A-Z])/g, "$1 $2");
+        }
+        return "";
+    }
+
+    //! show the settings of `pushObject`, opening the settings window if needed
+    function open(pushObject, propertiesQml, explicitTitle) {
         if (currentObject !== pushObject || currentQml !== propertiesQml) {
 
             reset();
             currentObject = pushObject;
             currentQml = propertiesQml;
             if (propertiesQml) {
-                var item = propertiesStack.replace(
+                propertiesStack.replace(
                         propertiesQml,
                         {
                             dataObject: pushObject
@@ -75,7 +100,15 @@ Item {
             else
             console.error("qml not set for ", pushObject)
         }
-        delete pushObject;
+        title = titleFor(pushObject, propertiesQml, explicitTitle);
+        showRequested();
+    }
+
+    //! switch to `pushObject` only if the settings are already on screen (e.g. clicking a chart)
+    function follow(pushObject, propertiesQml, explicitTitle) {
+        if (shown && propertiesQml) {
+            open(pushObject, propertiesQml, explicitTitle);
+        }
     }
 
     function reset() {
@@ -83,6 +116,7 @@ Item {
         propertiesStack.push(topView);
         currentObject = null;
         currentQml = null;
+        title = "";
     }
 
     function clear() {

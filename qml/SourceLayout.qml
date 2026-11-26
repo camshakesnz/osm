@@ -31,6 +31,15 @@ import "source"
 ListView {
     id: sideList
     property var sources : null;
+    //! "live": measurements only (right side), "data": everything else (left side), "all"
+    property string side: "all"
+
+    function isLive(name) {
+        return name === "Measurement" || name === "RemoteMeasurement";
+    }
+    function shownFor(name) {
+        return side === "all" || (side === "live") === isLive(name);
+    }
 
     Component {
         id: measurementDelegate
@@ -122,6 +131,8 @@ ListView {
             property bool held: false
             property int swipeStart: 0
             property var source: model.source
+            readonly property bool shown: sideList.shownFor(model.name)
+            visible: shown
 
             acceptedButtons: Qt.LeftButton | Qt.RightButton
 
@@ -130,7 +141,7 @@ ListView {
                 right: parent ? parent.right : delegateComponent.right
             }
 
-            height: content.height
+            height: shown ? content.height : 0
             clip: true
 
             drag.target:    dragArea.held ? content : undefined
@@ -139,13 +150,13 @@ ListView {
             hoverEnabled: true
             onPressAndHold: dragArea.held = true;
             onReleased: {
-                //onClick open properties
+                //onClick: show its settings if the settings window is open
                 if (
                         loaded.status == Loader.Ready &&
                         loaded.item.dataModel &&
                         loaded.item.propertiesQml
                    ) {
-                    applicationWindow.properiesbar.open(loaded.item.dataModel, loaded.item.propertiesQml);
+                    applicationWindow.properiesbar.follow(loaded.item.dataModel, loaded.item.propertiesQml);
                 }
                 //release drag
                 if (dragArea.held) {
@@ -190,6 +201,14 @@ ListView {
                     source.data
                 ) {
                     applicationWindow.dataSourceList.list.openGroup(source);
+                } else {
+                    dragArea.openSettings();
+                }
+            }
+
+            function openSettings() {
+                if (loaded.status == Loader.Ready && loaded.item.dataModel && loaded.item.propertiesQml) {
+                    applicationWindow.properiesbar.open(loaded.item.dataModel, loaded.item.propertiesQml);
                 }
             }
 
@@ -238,11 +257,31 @@ ListView {
                 states: State {
                     when: dragArea.held
 
-                    ParentChange { target: content; parent: applicationWindow.dataSourceList }
+                    ParentChange { target: content; parent: sideList }
                     AnchorChanges {
                         target: content
                         anchors { horizontalCenter: undefined; verticalCenter: undefined }
                     }
+                }
+
+                Button {
+                    id: settingsButton
+                    text: "\u2699"
+                    anchors.right: cloneButton.visible ? cloneButton.left : spacer.left
+                    anchors.top: parent.top
+                    flat: true
+                    font.pixelSize: 15
+                    rightPadding: 4
+                    leftPadding: 4
+                    visible: loaded.status == Loader.Ready && loaded.item && loaded.item.propertiesQml ? true : false
+                    opacity: hovered ? 1 : 0.7
+                    onClicked: dragArea.openSettings()
+                    background: Rectangle {
+                        color: "transparent"
+                    }
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("settings")
+                    ToolTip.delay: 600
                 }
 
                 Button {
@@ -256,6 +295,7 @@ ListView {
                     rightPadding: 4
                     leftPadding: 4
                     visible: (dragArea.source && dragArea.source.data ? dragArea.source.data.cloneable : false)
+                    opacity: dragArea.containsMouse || hovered ? 1 : 0
                     onClicked: {
                         sources.cloneItem(dragArea.source);
                     }
@@ -280,6 +320,7 @@ ListView {
                     font.family: "Osm"
                     text: "\ue801"
                     anchors.right: parent.right
+                    opacity: dragArea.containsMouse || hovered ? 1 : 0
                     anchors.top: parent.top
                     flat: true
                     font.pixelSize: 14
@@ -354,7 +395,7 @@ ListView {
         z: 2
         border.color: sources.highlightColor
         border.width: 0.5
-        visible: sources.selectedIndex >= 0 ? true : false
+        visible: sources.selectedIndex >= 0 && sideList.currentItem && sideList.currentItem.height > 0 ? true : false
         color: "transparent"
     }
 

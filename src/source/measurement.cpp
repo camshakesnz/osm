@@ -22,6 +22,7 @@
 #include <QtMath>
 #include <algorithm>
 #include <utility>
+#include <cstdlib>
 #include "measurement.h"
 #include "audio/client.h"
 #include "generator/generatorthread.h"
@@ -606,12 +607,18 @@ void Measurement::transform()
     }
     m_dataFT.transform();
     m_deconvolution.transform(&m_dataFT);
-    if ((++m_delayFinderCounter % 25) == 0) {
+    // the delay finder runs every 2 s, or every 0.5 s while tracking
+    bool delayFound = false;
+    if ((++m_delayFinderCounter % (m_trackDelay.load() ? 6 : 25)) == 0) {
         m_delayFinder.transform(nullptr);
         m_delayFinderCounter = 0;
+        delayFound = true;
     }
     averaging();
     unlock();
+    if (delayFound && m_trackDelay.load()) {
+        trackDelayStep();
+    }
     emit readyRead();
     emit levelChanged();
     emit referenceLevelChanged();
@@ -1058,6 +1065,66 @@ void Measurement::armChirp() noexcept
     m_chirpArmRequest.store(true);
 }
 
+bool Measurement::trackDelay() const noexcept
+{
+    return m_trackDelay.load();
+}
+
+void Measurement::setTrackDelay(bool track)
+{
+    if (m_trackDelay.exchange(track) != track) {
+        m_trackHasCandidate = false;
+        setTrackState(track ? 1 : 0);
+        emit trackDelayChanged(track);
+    }
+}
+
+int Measurement::trackState() const noexcept
+{
+    return m_trackState.load();
+}
+
+void Measurement::setTrackState(int state)
+{
+    if (m_trackState.exchange(state) != state) {
+        emit trackStateChanged(state);
+    }
+}
+
+/**
+ * Called from the timer thread after each delay-finder run while tracking.
+ * An estimate is applied only when its peak stands well clear of the rest of the
+ * correlation (so music with little energy or a noisy room doesn't make it jump)
+ * and the previous run found the same delay (within 0.25 ms).
+ */
+void Measurement::trackDelayStep()
+{
+    static constexpr float MIN_PEAK_RATIO = 12.f; // ~22 dB above the rms of the correlation
+    const long estimate = estimated();
+    const long quarterMs = static_cast<long>(sampleRate() / 4000);
+    const long tolerance = quarterMs > 2 ? quarterMs : 2;
+
+    if (!(m_delayFinder.peakRatio() >= MIN_PEAK_RATIO)) {
+        m_trackHasCandidate = false;
+        setTrackState(1);
+        return;
+    }
+    if (m_trackHasCandidate && std::abs(estimate - m_trackCandidate) <= tolerance) {
+        if (std::abs(estimate - static_cast<long>(delay())) > 1) {
+            QMetaObject::invokeMethod(this, [this, estimate]() {
+                if (m_trackDelay.load()) {
+                    setDelay(static_cast<int>(estimate));
+                }
+            }, Qt::QueuedConnection);
+        }
+        setTrackState(2);
+    } else if (m_trackState.load() != 2 || std::abs(estimate - static_cast<long>(delay())) > tolerance) {
+        setTrackState(1);
+    }
+    m_trackCandidate = estimate;
+    m_trackHasCandidate = true;
+}
+
 bool Measurement::chirpAutoStore() const noexcept
 {
     return m_chirpAutoStore.load();
@@ -1190,8 +1257,19 @@ void Measurement::transformChirp()
         m_chirpEstimate.store(m_chirp.peakDelay());
         unlock();
         emit estimatedChanged();
-        if (m_chirp.state() == ChirpAnalyzer::State::Complete && m_chirpAutoStore.load()) {
+        const bool complete = (m_chirp.state() == ChirpAnalyzer::State::Complete);
+        if (complete && m_chirpAutoStore.load()) {
             emit chirpSetComplete();
+        }
+        if (complete && m_trackDelay.load()) {
+            // the chirp set is clean by design: follow its first arrival for the next set
+            const long target = estimated();
+            if (target != static_cast<long>(delay())) {
+                QMetaObject::invokeMethod(this, [this, target]() {
+                    setDelay(static_cast<int>(target));
+                }, Qt::QueuedConnection);
+            }
+            setTrackState(2);
         }
     }
     // every tick, like the other modes: level meters (numeric/SPL) refresh on readyRead

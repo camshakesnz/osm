@@ -26,13 +26,16 @@ import SourceModel 1.0
 import OpenSoundMeter 1.0
 
 import "menu" as Menu
+import "elements"
+import QtQuick.Controls 2.15 as C2
 
 ApplicationWindow {
     id:applicationWindow
 
     property alias properiesbar: bottomtab
     property alias charts: charts
-    property alias dataSourceList : righttab
+    property alias dataSourceList : dataBar
+    property alias liveBar : righttab
     property alias message : message
     property alias dialog : dialog
     property alias sideMenu: sideMenu
@@ -40,6 +43,147 @@ ApplicationWindow {
     property string accentColor: Material.accent
     property string foregroundColor: Material.foreground
     readonly property bool narrowWindow: width < 1024
+
+    function boolSetting(key, defaultValue) {
+        var v = applicationSettings.value(key);
+        if (v === undefined) {
+            return defaultValue;
+        }
+        return v === true || v === "true";
+    }
+
+    // ---------------------------------------------------------------- layout
+    //! stored traces and folders on the left
+    property bool dataBarVisible: boolSetting("ui/dataBar", true)
+    onDataBarVisibleChanged: applicationSettings.setValue("ui/dataBar", dataBarVisible)
+    //! settings along the bottom (the old way) instead of a floating window
+    property bool settingsDocked: boolSetting("ui/settingsDocked", false)
+    onSettingsDockedChanged: {
+        applicationSettings.setValue("ui/settingsDocked", settingsDocked);
+        if (settingsDocked) {
+            settingsWindow.close();
+        } else if (bottomtab.currentObject !== null || bottomtab.currentQml) {
+            settingsWindow.open();
+        }
+    }
+
+    //! store every active measurement (Ctrl+X, Capture)
+    function captureAll() {
+        for (var i = 0; i < sourceList.count; i++) {
+            let source = sourceList.get(i).data;
+            if (source && source.active && source.objectName === "Measurement") {
+                var stored = source.store();
+                if (stored && stored.data) {
+                    stored.data.autoName(source.name);
+                    stored.data.active = true;
+                    sourceList.appendCapture(stored);
+                }
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------- views
+    // Each view keeps its own charts under views/<id>/charts (see Charts.qml).
+    property var viewList: []
+    property string currentViewId: initViews()
+    property string previousViewId: ""
+    onCurrentViewIdChanged: applicationSettings.setValue("views/current", currentViewId)
+
+    function viewIdsFromSettings() {
+        var ids = applicationSettings.value("views/list");
+        if (ids === undefined || ids === null || String(ids).length === 0) {
+            return [];
+        }
+        return String(ids).split("|").filter(function(id) { return id.length > 0; });
+    }
+    function saveViewList(ids) {
+        applicationSettings.setValue("views/list", ids.join("|"));
+        viewList = ids;
+    }
+    function viewName(id) {
+        var name = applicationSettings.value("views/" + id + "/name");
+        return name === undefined ? id : String(name);
+    }
+    function presetView(id, name, types, weights) {
+        var g = "views/" + id;
+        applicationSettings.setValue(g + "/name", name);
+        applicationSettings.setValue(g + "/charts/count", types.length);
+        for (var i = 0; i < types.length; ++i) {
+            applicationSettings.setValue(g + "/charts/" + (i + 1) + "/type", types[i]);
+        }
+        applicationSettings.setValue(g + "/charts/weights", weights);
+    }
+    //! first start with views: a Live and a TF view, plus the charts the user already had
+    function initViews() {
+        var ids = viewIdsFromSettings();
+        if (ids.length === 0) {
+            presetView("live", qsTr("Live"), ["Spectrum", "Spectrogram", "Numeric"], "0.42,0.38,0.2");
+            // one big SPL meter under the spectrograph
+            applicationSettings.setValue("views/live/charts/3/rows", 1);
+            applicationSettings.setValue("views/live/charts/3/columns", 1);
+            presetView("tf", qsTr("TF"), ["Impulse", "Phase", "Magnitude"], "0.26,0.34,0.4");
+            ids = ["live", "tf"];
+            if (applicationSettings.value("layout/charts/1/type") !== undefined) {
+                applicationSettings.copyGroup("layout/charts", "views/mine/charts");
+                applicationSettings.setValue("views/mine/name", qsTr("My layout"));
+                ids.push("mine");
+            }
+            applicationSettings.setValue("views/list", ids.join("|"));
+        }
+        viewList = ids;
+        var current = applicationSettings.value("views/current");
+        current = current === undefined ? "" : String(current);
+        return ids.indexOf(current) >= 0 ? current : ids[0];
+    }
+    function setView(id) {
+        if (id === currentViewId || viewList.indexOf(id) < 0) {
+            return;
+        }
+        // chart settings belong to the charts being replaced
+        if (bottomtab.currentQml && /\/(Plot|SPL|Loudness)\//.test(String(bottomtab.currentQml))) {
+            bottomtab.reset();
+        }
+        previousViewId = currentViewId;
+        currentViewId = id;
+    }
+    //! Space: back to the previous view (or the next one)
+    function toggleView() {
+        if (previousViewId && viewList.indexOf(previousViewId) >= 0) {
+            setView(previousViewId);
+        } else if (viewList.length > 1) {
+            setView(viewList[(viewList.indexOf(currentViewId) + 1) % viewList.length]);
+        }
+    }
+    function addView(copyFrom) {
+        var id = "v" + Date.now().toString(36);
+        if (copyFrom) {
+            applicationSettings.copyGroup("views/" + copyFrom + "/charts", "views/" + id + "/charts");
+        }
+        applicationSettings.setValue("views/" + id + "/name", qsTr("View %1").arg(viewList.length + 1));
+        var ids = viewList.slice();
+        ids.push(id);
+        saveViewList(ids);
+        setView(id);
+        return id;
+    }
+    function renameView(id, name) {
+        applicationSettings.setValue("views/" + id + "/name", name);
+        viewList = viewList.slice(); // refresh the buttons
+    }
+    function deleteView(id) {
+        if (viewList.length < 2) {
+            return;
+        }
+        var ids = viewList.filter(function(v) { return v !== id; });
+        if (currentViewId === id) {
+            setView(previousViewId && ids.indexOf(previousViewId) >= 0 ? previousViewId : ids[0]);
+        }
+        if (previousViewId === id) {
+            previousViewId = "";
+        }
+        saveViewList(ids);
+        applicationSettings.removeGroup("views/" + id);
+    }
 
     visible: true
     flags: Qt.Window
@@ -213,35 +357,213 @@ ApplicationWindow {
 
     menuBar: (applicationAppearance.showMenuBar ? topMenu : null)
 
-    GridLayout {
-        anchors.fill: parent
-        flow: Qt.LeftToRight
-        columns: 2
-        columnSpacing: 0
-        rowSpacing: 0
+    readonly property color dividerColor: Qt.rgba(Material.foreground.r, Material.foreground.g, Material.foreground.b, 0.12)
 
-        //Charts area
-        Charts {
-            id: charts
-            Layout.fillWidth: true
+    RowLayout {
+        anchors.fill: parent
+        spacing: 0
+
+        // stored traces, folders, files
+        DataBar {
+            id: dataBar
             Layout.fillHeight: true
+            Layout.preferredWidth: 220
+            visible: applicationWindow.dataBarVisible && applicationWindow.width >= 980
+        }
+        Rectangle {
+            Layout.fillHeight: true
+            Layout.preferredWidth: 1
+            color: dividerColor
+            visible: dataBar.visible
         }
 
-        SideBar {
+        ColumnLayout {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            spacing: 0
+
+            //Charts area
+            Charts {
+                id: charts
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                viewId: applicationWindow.currentViewId
+            }
+
+            // settings docked along the bottom (optional)
+            Item {
+                id: dockHost
+                Layout.fillWidth: true
+                Layout.preferredHeight: applicationWindow.settingsDocked ? 150 : 0
+                visible: applicationWindow.settingsDocked
+
+                Rectangle {
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    height: 1
+                    color: dividerColor
+                }
+                C2.Label {
+                    id: dockTitle
+                    anchors.left: parent.left
+                    anchors.top: parent.top
+                    anchors.leftMargin: 10
+                    anchors.topMargin: 4
+                    text: bottomtab.title
+                    font.bold: true
+                    font.pixelSize: 12
+                    opacity: 0.8
+                }
+                MiniButton {
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    anchors.margins: 3
+                    text: qsTr("Float")
+                    tooltip: qsTr("show settings in a floating window instead")
+                    onClicked: applicationWindow.settingsDocked = false
+                }
+                Item {
+                    id: dockBody
+                    anchors.fill: parent
+                    anchors.topMargin: 24
+                }
+            }
+        }
+
+        Rectangle {
+            Layout.fillHeight: true
+            Layout.preferredWidth: 1
+            color: dividerColor
+        }
+
+        // views, measurements, generator
+        LiveBar {
             id: righttab
             Layout.fillHeight: true
-            Layout.rowSpan: applicationWindow.narrowWindow ? 1 : 2
-            width: 200
+            Layout.preferredWidth: 262
+        }
+    }
+
+    //Properties area: in the floating settings window, or docked along the bottom
+    PropetiesBar {
+        id: bottomtab
+        parent: applicationWindow.settingsDocked ? dockBody : floatBody
+        anchors.fill: parent
+        shown: applicationWindow.settingsDocked || settingsWindow.opened
+        onShowRequested: {
+            if (!applicationWindow.settingsDocked && !settingsWindow.opened) {
+                settingsWindow.open();
+            }
+        }
+    }
+
+    C2.Popup {
+        id: settingsWindow
+        parent: C2.Overlay.overlay
+        modal: false
+        focus: true
+        closePolicy: C2.Popup.CloseOnEscape
+        padding: 0
+        width: Math.min(applicationWindow.width - 16, 1180)
+        height: 176
+
+        function clampPosition() {
+            var ox = Number(applicationSettings.value("ui/settingsWindow/x", -1));
+            var oy = Number(applicationSettings.value("ui/settingsWindow/y", -1));
+            if (ox < 0 || oy < 0) {
+                // first time: along the bottom of the charts
+                ox = Math.max(8, (charts.mapToItem(null, 0, 0).x + (charts.width - width) / 2));
+                oy = applicationWindow.contentItem.height - height - 10;
+            }
+            x = Math.max(0, Math.min(ox, applicationWindow.width - width));
+            y = Math.max(0, Math.min(oy, applicationWindow.contentItem.height - height));
+        }
+        onAboutToShow: clampPosition()
+
+        background: Rectangle {
+            color: applicationAppearance.darkMode ? "#2a2a2e" : "#fafafa"
+            radius: 6
+            border.width: 1
+            border.color: Qt.rgba(Material.foreground.r, Material.foreground.g, Material.foreground.b, 0.25)
         }
 
-        //Properties area
-        PropetiesBar {
-            id: bottomtab
-            height: 120
-            Layout.fillWidth: true
-            Layout.columnSpan: applicationWindow.narrowWindow ? 2 : 1
-        }
+        contentItem: ColumnLayout {
+            spacing: 0
 
+            Item {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 30
+
+                // drag the window by its title bar
+                MouseArea {
+                    id: dragBar
+                    anchors.fill: parent
+                    cursorShape: Qt.SizeAllCursor
+                    property point offset
+                    onPressed: function(m) {
+                        var p = mapToItem(null, m.x, m.y);
+                        offset = Qt.point(p.x - settingsWindow.x, p.y - settingsWindow.y);
+                    }
+                    onPositionChanged: function(m) {
+                        var p = mapToItem(null, m.x, m.y);
+                        settingsWindow.x = Math.max(0, Math.min(p.x - offset.x, applicationWindow.width - settingsWindow.width));
+                        settingsWindow.y = Math.max(0, Math.min(p.y - offset.y, applicationWindow.contentItem.height - settingsWindow.height));
+                    }
+                    onReleased: {
+                        applicationSettings.setValue("ui/settingsWindow/x", Math.round(settingsWindow.x));
+                        applicationSettings.setValue("ui/settingsWindow/y", Math.round(settingsWindow.y));
+                    }
+                }
+
+                C2.Label {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 12
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.right: titleButtons.left
+                    text: "⚙  " + (bottomtab.title ? bottomtab.title : qsTr("Settings"))
+                    font.bold: true
+                    font.pixelSize: 13
+                    elide: Text.ElideRight
+                }
+
+                Row {
+                    id: titleButtons
+                    anchors.right: parent.right
+                    anchors.rightMargin: 6
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 4
+                    MiniButton {
+                        text: qsTr("Dock")
+                        tooltip: qsTr("keep settings along the bottom of the window")
+                        onClicked: applicationWindow.settingsDocked = true
+                    }
+                    MiniButton {
+                        text: "✕"
+                        tooltip: qsTr("close (Esc)")
+                        onClicked: settingsWindow.close()
+                    }
+                }
+
+                Rectangle {
+                    anchors.bottom: parent.bottom
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    height: 1
+                    color: dividerColor
+                }
+            }
+
+            Item {
+                id: floatBody
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+            }
+        }
+    }
+
+    Shortcut {
+        sequence: "Ctrl+B"
+        onActivated: applicationWindow.dataBarVisible = !applicationWindow.dataBarVisible
     }
 
     About {
@@ -296,6 +618,7 @@ ApplicationWindow {
         nameFilters: ["Open Sound Meter (*.osm)"]
         onAccepted: function() {
             applicationWindow.properiesbar.clear();
+            dataBar.list.pop(null);
             if (!sourceList.load(openDialog.fileUrl)) {
                 message.showError(qsTr("could not open the file"));
             }

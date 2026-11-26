@@ -236,6 +236,15 @@ Item {
             }
         }
 
+        TitledCombo {
+            title: qsTr("colours")
+            tooltip: qsTr("heat: nothing below min, then blue, green, yellow, red and white at max")
+            Layout.preferredWidth: 160
+            model: [qsTr("heat"), qsTr("classic")]
+            currentIndex: dataObject.colorScheme
+            onActivated: dataObject.colorScheme = currentIndex
+        }
+
         RowLayout {
             Layout.fillWidth: true
         }

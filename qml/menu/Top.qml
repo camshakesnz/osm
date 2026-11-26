@@ -237,6 +237,18 @@ MenuBar {
             }
         }
         MenuItem {
+            text: qsTr("Data &bar (Ctrl+B)")
+            checkable: true
+            checked: applicationWindow.dataBarVisible
+            onTriggered: applicationWindow.dataBarVisible = checked
+        }
+        MenuItem {
+            text: qsTr("Settings docked at the &bottom")
+            checkable: true
+            checked: applicationWindow.settingsDocked
+            onTriggered: applicationWindow.settingsDocked = checked
+        }
+        MenuItem {
             text: qsTr("New &window (meters)")
             shortcut: "Ctrl+Shift+M"
             onTriggered: applicationWindow.popOut("Numeric", "")

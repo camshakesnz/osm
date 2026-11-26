@@ -54,6 +54,7 @@ private:
     std::deque<historyRow> m_history;
     bool m_refreshBuffers, m_plotActive;
     int m_min, m_mid, m_max;
+    int m_colorScheme = 0;
     unsigned int m_pointsPerOctave;
     unsigned int m_sourceSize;
     QElapsedTimer m_timer;

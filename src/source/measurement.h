@@ -93,6 +93,11 @@ class Measurement : public Abstract::Source, public Meta::Measurement
     //chirp modes: store the result automatically when a set finishes
     Q_PROPERTY(bool chirpAutoStore READ chirpAutoStore WRITE setChirpAutoStore NOTIFY chirpAutoStoreChanged)
 
+    //delay tracking: apply the estimated delay automatically when it is clear and repeatable
+    Q_PROPERTY(bool trackDelay READ trackDelay WRITE setTrackDelay NOTIFY trackDelayChanged)
+    //! 0: off, 1: searching (no clear estimate), 2: locked
+    Q_PROPERTY(int trackState READ trackState NOTIFY trackStateChanged)
+
     //loudness (EBU R128): measurement channel = left, reference channel = right, or mono
     Q_PROPERTY(bool loudnessMono READ loudnessMono WRITE setLoudnessMono NOTIFY loudnessMonoChanged)
 
@@ -135,6 +140,9 @@ public:
     Q_INVOKABLE void applyAutoGain(const float reference) override;
 
     bool chirpMode() const noexcept;
+    bool trackDelay() const noexcept;
+    void setTrackDelay(bool track);
+    int trackState() const noexcept;
     bool chirpAutoStore() const noexcept;
     void setChirpAutoStore(bool autoStore);
     QString chirpStatus() const;
@@ -225,6 +233,13 @@ private:
     QString m_chirpStatus;
     std::atomic<bool> m_chirpAutoStore {true};
 
+    std::atomic<bool> m_trackDelay {false};
+    std::atomic<int> m_trackState {0};
+    long m_trackCandidate = 0;
+    bool m_trackHasCandidate = false;
+    void trackDelayStep();
+    void setTrackState(int state);
+
     LoudnessMeter m_loudness;
     std::atomic<bool> m_loudnessActive {false};
     std::atomic<qint64> m_loudnessPolled {0};
@@ -253,6 +268,8 @@ signals:
     void calibrationLoadedChanged(bool);
     void chirpStatusChanged();
     void chirpAutoStoreChanged(bool);
+    void trackDelayChanged(bool);
+    void trackStateChanged(int);
     //! a chirp set has finished and auto store is on
     void chirpSetComplete();
     void loudnessMonoChanged(bool);

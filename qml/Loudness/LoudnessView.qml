@@ -147,7 +147,12 @@ Item {
         id: opener
         pushObject: view
         propertiesQml: "qrc:/Loudness/LoudnessProperties.qml"
-        onClicked: open()
+        onClicked: applicationWindow.properiesbar.follow(view, propertiesQml, qsTr("Loudness"))
+    }
+
+    //! the chart's gear button
+    function openSettings() {
+        applicationWindow.properiesbar.open(view, opener.propertiesQml, qsTr("Loudness"));
     }
 
     Column {
@@ -176,7 +181,7 @@ Item {
             text: view.available ?
                       (view.measurement.loudnessMono ? qsTr("Mono") : qsTr("Stereo")) +
                       "  ·  " + qsTr("target %1 LUFS").arg(Math.round(view.target)) :
-                      qsTr("click to choose a measurement")
+                      qsTr("\u2699 (bottom right) to choose a measurement")
         }
     }
 
@@ -369,7 +374,7 @@ Item {
         visible: !view.available
         horizontalAlignment: Text.AlignHCenter
         color: view.dimColor
-        text: qsTr("Click here to choose a measurement.\nIts measurement channel is read as Left and its reference channel as Right.")
+        text: qsTr("Use the \u2699 button (bottom right) to choose a measurement.\nIts measurement channel is read as Left and its reference channel as Right.")
     }
     Label {
         anchors.centerIn: parent

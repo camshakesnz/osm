@@ -67,6 +67,8 @@ public:
     virtual void inheritSettings(const Plot *source) = 0;
 
     const Palette &palette() const noexcept;
+    //! colour under the series inside the axes; invalid: same as the background
+    virtual QColor plotAreaColor() const;
     bool darkMode() const noexcept;
     void setDarkMode(bool darkMode) noexcept;
 

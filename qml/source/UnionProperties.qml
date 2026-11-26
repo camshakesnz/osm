@@ -108,7 +108,7 @@ Item {
                 onClicked: {
                     var stored = dataObjectData.store();
                     stored.data.active = true;
-                    sourceList.appendItem(stored, true);
+                    sourceList.appendCapture(stored);
                 }
                 ToolTip.visible: hovered
                 ToolTip.text: qsTr("store current measurement")

@@ -133,8 +133,30 @@ QSGNode *Plot::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *)
     }
     node->setColor(m_palette.backgroundColor());
     node->setRect(boundingRect());
+
+    // optional plot area colour (e.g. black under a heat-coloured spectrograph)
+    auto *area = static_cast<QSGSimpleRectNode *>(node->firstChild());
+    const QColor areaColor = plotAreaColor();
+    if (areaColor.isValid()) {
+        if (!area) {
+            area = new QSGSimpleRectNode();
+            node->appendChildNode(area);
+        }
+        area->setColor(areaColor);
+        area->setRect(QRectF(m_padding.left, m_padding.top,
+                             qMax(0.0, width()  - m_padding.left - m_padding.right),
+                             qMax(0.0, height() - m_padding.top  - m_padding.bottom)));
+    } else if (area) {
+        node->removeChildNode(area);
+        delete area;
+    }
     emit updated();
     return node;
+}
+
+QColor Plot::plotAreaColor() const
+{
+    return QColor();
 }
 
 bool Plot::appendDataSource(const Shared::Source &source)
