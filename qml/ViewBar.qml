@@ -81,6 +81,13 @@ Item {
             }
         }
         MenuItem {
+            text: qsTr("Reset to default")
+            enabled: applicationWindow.hasDefault(viewMenu.viewId)
+            height: enabled ? implicitHeight : 0
+            visible: enabled
+            onTriggered: applicationWindow.resetView(viewMenu.viewId)
+        }
+        MenuItem {
             text: qsTr("Delete")
             enabled: applicationWindow.viewList.length > 1
             onTriggered: applicationWindow.deleteView(viewMenu.viewId)

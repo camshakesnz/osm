@@ -136,15 +136,17 @@ The window is laid out in the style of Smaart:
 ## Views
 
 The buttons at the top right are views. Each view keeps its own charts: how many, their types and
-all their settings. Two are made for you:
+all their settings. Changes are saved as you make them, so switching to another view and back (or
+restarting) brings back the view exactly as you left it. Two views are made for you:
 
-- **Live**: spectrum (RTA), spectrograph and one big SPL meter;
-- **TF**: impulse, phase and magnitude.
+- **Live**: three SPL meters along the top, spectrum (RTA) in the middle, spectrograph at the bottom;
+- **TF**: impulse at the top, magnitude in the middle, phase at the bottom.
 
-If you had charts set up before, they are kept as a third view, *My layout*. *+* adds a view
+Right-click *Live* or *TF* and choose **Reset to default** to put it back to that layout. If you
+had charts set up before views existed, they are kept as a third view, *My layout*. *+* adds a view
 (a copy of the current one); right-click a view to rename, duplicate or delete it. Space flips
 between the last two views and Alt+1…6 picks a view. Ctrl+1/2/3 set the number of charts in
-the current view.
+the current view. When the window grows, the view's biggest chart takes the extra height.
 
 ## Spectrograph colours
 

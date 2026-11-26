@@ -34,6 +34,8 @@ Item {
     property bool loading: false
     //! the view has no stored chart heights yet (first time it is opened)
     property bool needsAutoHeight: false
+    //! the chart that takes up spare height when the window grows: the view's biggest one
+    property int fillIndex: 1
 
     function groupFor(index) {
         return prefix + "/" + index;
@@ -56,6 +58,14 @@ Item {
         prefix = viewId ? "views/" + viewId + "/charts" : "layout/charts";
         needsAutoHeight = (applicationSettings.value(prefix + "/sized") === undefined);
         count = Math.max(1, Math.min(3, Number(applicationSettings.value(prefix + "/count", 1))));
+        var stored = applicationSettings.value(prefix + "/weights");
+        var weights = String(stored === undefined ? "" : stored).split(",").map(Number);
+        fillIndex = 1;
+        for (var i = 1; i < Math.min(weights.length, 3); ++i) {
+            if (weights[i] > weights[fillIndex - 1]) {
+                fillIndex = i + 1;
+            }
+        }
         loader.active = false;
         loader.active = true;
         loading = false;
@@ -137,7 +147,7 @@ Item {
                 Layout.fillWidth: true
                 Layout.minimumHeight: sv.minimunHeight
                 Layout.preferredWidth: parent.width
-                Layout.fillHeight: true
+                Layout.fillHeight: Math.min(chartsLayout.fillIndex, chartsLayout.count) === 1
                 height: applicationSettings.value(chartsLayout.groupFor(1) + "/height", 300)
                 onHeightChanged: applicationSettings.setValue(chartsLayout.groupFor(1) + "/height", height)
                 type: applicationSettings.value(chartsLayout.groupFor(1) + "/type", "Spectrum")
@@ -155,6 +165,7 @@ Item {
                 Layout.fillWidth: true
                 Layout.minimumHeight: sv.minimunHeight
                 Layout.preferredWidth: parent.width
+                Layout.fillHeight: Math.min(chartsLayout.fillIndex, chartsLayout.count) === 2
                 height: applicationSettings.value(chartsLayout.groupFor(2) + "/height", 300)
                 onHeightChanged: applicationSettings.setValue(chartsLayout.groupFor(2) + "/height", height)
                 type: applicationSettings.value(chartsLayout.groupFor(2) + "/type", "Spectrum")
@@ -172,6 +183,7 @@ Item {
                 Layout.fillWidth: true
                 Layout.minimumHeight: sv.minimunHeight
                 Layout.preferredWidth: parent.width
+                Layout.fillHeight: Math.min(chartsLayout.fillIndex, chartsLayout.count) === 3
                 height: applicationSettings.value(chartsLayout.groupFor(3) + "/height", 300)
                 onHeightChanged: applicationSettings.setValue(chartsLayout.groupFor(3) + "/height", height)
                 type: applicationSettings.value(chartsLayout.groupFor(3) + "/type", "Spectrum")

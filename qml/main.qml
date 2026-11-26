@@ -113,15 +113,41 @@ ApplicationWindow {
         }
         applicationSettings.setValue(g + "/charts/weights", weights);
     }
+    //! the built-in views
+    function hasDefault(id) {
+        return id === "live" || id === "tf";
+    }
+    function defaultView(id) {
+        applicationSettings.removeGroup("views/" + id + "/charts");
+        if (id === "live") {
+            // three SPL meters along the top, spectrum, spectrograph
+            presetView("live", qsTr("Live"), ["Numeric", "Spectrum", "Spectrogram"], "0.2,0.42,0.38");
+            applicationSettings.setValue("views/live/charts/1/rows", 1);
+            applicationSettings.setValue("views/live/charts/1/columns", 3);
+        } else if (id === "tf") {
+            presetView("tf", qsTr("TF"), ["Impulse", "Magnitude", "Phase"], "0.26,0.4,0.34");
+        }
+    }
+    //! put a built-in view back to how it starts (keeps its name)
+    function resetView(id) {
+        if (!hasDefault(id)) {
+            return;
+        }
+        var name = viewName(id);
+        defaultView(id);
+        applicationSettings.setValue("views/" + id + "/name", name);
+        if (id === currentViewId) {
+            bottomtab.reset();
+            charts.loadView();
+        }
+    }
+
     //! first start with views: a Live and a TF view, plus the charts the user already had
     function initViews() {
         var ids = viewIdsFromSettings();
         if (ids.length === 0) {
-            presetView("live", qsTr("Live"), ["Spectrum", "Spectrogram", "Numeric"], "0.42,0.38,0.2");
-            // one big SPL meter under the spectrograph
-            applicationSettings.setValue("views/live/charts/3/rows", 1);
-            applicationSettings.setValue("views/live/charts/3/columns", 1);
-            presetView("tf", qsTr("TF"), ["Impulse", "Phase", "Magnitude"], "0.26,0.34,0.4");
+            defaultView("live");
+            defaultView("tf");
             ids = ["live", "tf"];
             if (applicationSettings.value("layout/charts/1/type") !== undefined) {
                 applicationSettings.copyGroup("layout/charts", "views/mine/charts");
