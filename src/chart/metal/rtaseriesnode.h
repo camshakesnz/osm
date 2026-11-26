@@ -59,6 +59,14 @@ private:
 
     //!MTLBuffer
     void *m_vertexBuffer, *m_matrixBuffer;
+
+    //! fill under the line (line mode)
+    bool m_fill = false;
+    float m_fillColor[4] = {0.f, 0.f, 0.f, 1.f};
+    std::vector<float> m_fillVertices;
+    //!MTLBuffer
+    void *m_fillBuffer = nullptr, *m_fillColorBuffer = nullptr;
+    size_t m_fillBufferSize = 0;
 };
 
 } // namespace chart

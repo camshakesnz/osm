@@ -124,6 +124,7 @@ ApplicationWindow {
             presetView("live", qsTr("Live"), ["Numeric", "Spectrum", "Spectrogram"], "0.2,0.42,0.38");
             applicationSettings.setValue("views/live/charts/1/rows", 1);
             applicationSettings.setValue("views/live/charts/1/columns", 3);
+            applicationSettings.setValue("views/live/charts/2/fill", true);
         } else if (id === "tf") {
             presetView("tf", qsTr("TF"), ["Impulse", "Magnitude", "Phase"], "0.26,0.4,0.34");
         }
@@ -340,6 +341,8 @@ ApplicationWindow {
     visibility: applicationAppearance.visibility
     color: applicationAppearance.darkMode ? Material.backgroundColor : "#FFFFFF"
     Material.theme: applicationAppearance.darkMode ? Material.Dark : Material.Light
+    // darker than Material's dark grey, closer to Smaart
+    Material.background: applicationAppearance.darkMode ? "#161618" : "#FAFAFA"
     Material.accent: Material.Indigo
 
     Rectangle {
@@ -507,7 +510,7 @@ ApplicationWindow {
         onAboutToShow: clampPosition()
 
         background: Rectangle {
-            color: applicationAppearance.darkMode ? "#2a2a2e" : "#fafafa"
+            color: applicationAppearance.darkMode ? "#222225" : "#fafafa"
             radius: 6
             border.width: 1
             border.color: Qt.rgba(Material.foreground.r, Material.foreground.g, Material.foreground.b, 0.25)

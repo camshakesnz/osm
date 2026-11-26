@@ -42,6 +42,8 @@ protected:
     void renderBars();
 
     void drawVertices(const GLsizei &count, const GLenum &mode);
+    //! fill under the first `count` points in m_vertices (x, y pairs), drawn before the line
+    void drawFill(const GLsizei &count);
     virtual void updateMatrix() override;
 
 private:
@@ -54,6 +56,14 @@ private:
     static constexpr float absolute_scale_offset = 140.f;
 
     QOpenGLShader *m_vertexShader, *m_geometryShader, *m_fragmentShader;
+
+    bool m_fill = false;
+    QColor m_fillColor;
+    QOpenGLShaderProgram m_fillProgram;
+    bool m_fillProgramReady = false;
+    int m_fillColorUniform = -1, m_fillMatrixUniform = -1;
+    GLuint m_fillVertexArrayId = 0, m_fillVertexBufferId = 0;
+    std::vector<GLfloat> m_fillVertices;
 };
 }
 #endif // RTASERIES_H

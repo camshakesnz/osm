@@ -16,6 +16,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include <Metal/Metal.h>
+#include <cmath>
 #include "rtaseriesnode.h"
 #include "../rtaplot.h"
 #include "math/equalloudnesscontour.h"
@@ -39,6 +40,8 @@ RTASeriesNode::~RTASeriesNode()
     [id_cast(MTLRenderPipelineState, m_pipelineBars) release];
     [id_cast(MTLBuffer, m_vertexBuffer) release];
     [id_cast(MTLBuffer, m_matrixBuffer) release];
+    [id_cast(MTLBuffer, m_fillBuffer) release];
+    [id_cast(MTLBuffer, m_fillColorBuffer) release];
 }
 
 void RTASeriesNode::initRender()
@@ -118,6 +121,17 @@ void RTASeriesNode::synchronizeSeries()
             m_scale = rtaPlot->scale();
         }
         m_showPeaks = rtaPlot->showPeaks();
+        m_fill = rtaPlot->fill();
+        if (m_fill && m_source) {
+            // opaque, a little darker than the line: the line stays visible along the top
+            const QColor background = rtaPlot->palette().backgroundColor();
+            const QColor color = m_source->color();
+            constexpr float k = 0.7f;
+            m_fillColor[0] = background.redF()   + k * (color.redF()   - background.redF());
+            m_fillColor[1] = background.greenF() + k * (color.greenF() - background.greenF());
+            m_fillColor[2] = background.blueF()  + k * (color.blueF()  - background.blueF());
+            m_fillColor[3] = 1.f;
+        }
     }
     synchronizeMatrix();
 }
@@ -197,6 +211,18 @@ void RTASeriesNode::renderLine()
         ++vertexCount;
     };
 
+    // fill under the line: two triangles from each segment down to far below the plot
+    m_fillVertices.clear();
+    constexpr float fillBottom = -1000.f;
+    auto addFill = [&] (float fromX, float fromY, float toX, float toY) {
+        if (!std::isfinite(fromY)) fromY = fillBottom;
+        if (!std::isfinite(toY))   toY   = fillBottom;
+        const float v[12] = {fromX, fromY, fromX, fillBottom, toX, toY,
+                             toX, toY, fromX, fillBottom, toX, fillBottom
+                            };
+        m_fillVertices.insert(m_fillVertices.end(), v, v + 12);
+    };
+
     auto addSegment = [&] (auto & i, auto fromX, auto fromY, auto toX, auto toY) {
         addPoint(i, fromX, fromY, toX, toY, 1.f);
         addPoint(i, fromX, fromY, toX, toY, 1.f);
@@ -205,6 +231,9 @@ void RTASeriesNode::renderLine()
         addPoint(i, fromX, fromY, toX, toY, 1.f);
         addPoint(i, toX, toY, fromX, fromY, -1.f);
         addPoint(i, toX, toY, fromX, fromY, -1.f);
+        if (m_fill) {
+            addFill(fromX, fromY, toX, toY);
+        }
     };
 
     if (m_pointsPerOctave > 0) {
@@ -272,6 +301,41 @@ void RTASeriesNode::renderLine()
     }
 
     auto encoder = id_cast(MTLRenderCommandEncoder, commandEncoder());
+
+    // the fill first, the line on top
+    if (m_fill && m_pipelineBars && !m_fillVertices.empty()) {
+        const size_t bytes = m_fillVertices.size() * sizeof(float);
+        if (!m_fillBuffer || m_fillBufferSize < bytes) {
+            [id_cast(MTLBuffer, m_fillBuffer) release];
+            m_fillBuffer = [
+                               id_cast(MTLDevice, m_device)
+                               newBufferWithLength: bytes
+                               options: MTLResourceStorageModeShared
+                           ];
+            m_fillBufferSize = bytes;
+        }
+        if (!m_fillColorBuffer) {
+            m_fillColorBuffer = [
+                                    id_cast(MTLDevice, m_device)
+                                    newBufferWithLength: 4 * sizeof(float)
+                                    options: MTLResourceStorageModeShared
+                                ];
+        }
+        void *fill_ptr = [id_cast(MTLBuffer, m_fillBuffer) contents];
+        void *fill_color_ptr = [id_cast(MTLBuffer, m_fillColorBuffer) contents];
+        if (fill_ptr && fill_color_ptr) {
+            memcpy(fill_ptr, m_fillVertices.data(), bytes);
+            memcpy(fill_color_ptr, m_fillColor, sizeof(m_fillColor));
+
+            [encoder setVertexBuffer: id_cast(MTLBuffer, m_fillBuffer) offset: 0 atIndex: 0];
+            [encoder setVertexBuffer: id_cast(MTLBuffer, m_matrixBuffer) offset: 0 atIndex: 1];
+            [encoder setFragmentBuffer: id_cast(MTLBuffer, m_fillColorBuffer) offset: 0 atIndex: 1];
+            [encoder setRenderPipelineState: id_cast(MTLRenderPipelineState, m_pipelineBars)];
+            [encoder drawPrimitives: MTLPrimitiveTypeTriangle
+                     vertexStart: 0
+                     vertexCount: m_fillVertices.size() / 2];
+        }
+    }
 
     [encoder setVertexBuffer: id_cast(MTLBuffer, m_vertexBuffer) offset: 0 atIndex: 0];
     [encoder setVertexBuffer: id_cast(MTLBuffer, m_matrixBuffer) offset: 0 atIndex: 1];

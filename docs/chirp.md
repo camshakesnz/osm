@@ -139,7 +139,7 @@ The buttons at the top right are views. Each view keeps its own charts: how many
 all their settings. Changes are saved as you make them, so switching to another view and back (or
 restarting) brings back the view exactly as you left it. Two views are made for you:
 
-- **Live**: three SPL meters along the top, spectrum (RTA) in the middle, spectrograph at the bottom;
+- **Live**: three SPL meters along the top, spectrum (RTA, filled) in the middle, spectrograph at the bottom;
 - **TF**: impulse at the top, magnitude in the middle, phase at the bottom.
 
 Right-click *Live* or *TF* and choose **Reset to default** to put it back to that layout. If you
@@ -153,3 +153,14 @@ the current view. When the window grows, the view's biggest chart takes the extr
 The spectrograph now uses heat colours by default: nothing (black) below the *min* level, then
 blue, green at *mid*, yellow, red, and white at *max*. Set min/mid/max in the chart's settings to
 suit the level of what you are measuring. *colours: classic* brings back the original look.
+
+## Filled spectrum
+
+In the spectrum (RTA) chart's settings, **fill** (line mode) fills the area under each trace
+in a slightly darker shade of its colour, with the line on top, like Smaart. Each trace is drawn
+in list order, so a later trace covers an earlier one where it is lower.
+
+## Dark mode
+
+Dark mode (View → Dark Mode, Ctrl+D) uses near-black panels and black SPL meters, closer to
+Smaart's dark look.

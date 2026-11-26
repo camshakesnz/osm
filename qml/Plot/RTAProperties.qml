@@ -204,6 +204,16 @@ Item {
             }
 
             CheckBox {
+                text: qsTr("fill")
+                checked: dataObject.fill
+                onClicked: dataObject.fill = checked
+                visible: mode.model[mode.currentIndex] === "line"
+
+                ToolTip.visible: hovered
+                ToolTip.text: qsTr("fill the area under the line")
+            }
+
+            CheckBox {
                 id: peaks
                 text: qsTr("hold peaks")
                 Layout.fillWidth: true

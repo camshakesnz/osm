@@ -40,6 +40,7 @@ RTAPlot::RTAPlot(Settings *settings, QQuickItem *parent): FrequencyBasedPlot(set
     setFlag(QQuickItem::ItemHasContents);
 
     connect(this, &RTAPlot::modeChanged, this, &RTAPlot::update);
+    connect(this, &RTAPlot::fillChanged, this, &RTAPlot::update);
     connect(this, &RTAPlot::showPeaksChanged, this, &RTAPlot::update);
     connect(this, &RTAPlot::pointsPerOctaveChanged, this, &RTAPlot::update);
     connect(this, &RTAPlot::scaleChanged, this, &RTAPlot::update);
@@ -102,6 +103,21 @@ void RTAPlot::setSettings(Settings *settings) noexcept
                                                                         m_scale).toUInt());
         setMode(m_settings->reactValue<RTAPlot, Chart::RTAPlot::Mode>("mode", this, &RTAPlot::modeChanged, m_mode).toUInt());
         setShowPeaks(m_settings->reactValue<RTAPlot, bool>("showPeaks", this, &RTAPlot::showPeaksChanged, m_mode).toBool());
+        setFill(m_settings->reactValue<RTAPlot, bool>("fill", this, &RTAPlot::fillChanged, m_fill).toBool());
+    }
+}
+
+bool RTAPlot::fill() const
+{
+    return m_fill;
+}
+
+void RTAPlot::setFill(bool fill)
+{
+    if (m_fill != fill) {
+        m_fill = fill;
+        emit fillChanged(m_fill);
+        update();
     }
 }
 void RTAPlot::storeSettings() noexcept
@@ -113,6 +129,7 @@ void RTAPlot::storeSettings() noexcept
     m_settings->setValue("mode", static_cast<int>(m_mode));
     m_settings->setValue("showPeaks", m_showPeaks);
     m_settings->setValue("scale", static_cast<int>(m_scale));
+    m_settings->setValue("fill", m_fill);
 }
 
 bool RTAPlot::showPeaks() const

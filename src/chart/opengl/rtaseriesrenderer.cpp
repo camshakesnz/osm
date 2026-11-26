@@ -106,6 +106,16 @@ void RTASeriesRenderer::synchronize(QQuickFramebufferObject *item)
             m_scale = plot->scale();
         }
         m_showPeaks = plot->showPeaks();
+        m_fill = plot->fill();
+        if (m_fill && m_source) {
+            // opaque, a little darker than the line: the line stays visible along the top
+            const QColor background = plot->palette().backgroundColor();
+            const QColor color = m_source->color();
+            constexpr float k = 0.7f;
+            m_fillColor.setRgbF(background.redF()   + k * (color.redF()   - background.redF()),
+                                background.greenF() + k * (color.greenF() - background.greenF()),
+                                background.blueF()  + k * (color.blueF()  - background.blueF()));
+        }
     }
 }
 void RTASeriesRenderer::updateMatrix()
@@ -177,6 +187,9 @@ void RTASeriesRenderer::renderLine()
             m_vertices[j + 1] = value;
         }
 
+        if (m_fill) {
+            drawFill(count);
+        }
         drawVertices(count, GL_LINE_STRIP);
     } else {
         unsigned int j = 0, i, verticiesCount = 0;
@@ -251,6 +264,9 @@ void RTASeriesRenderer::renderPPOLine()
     iterate(m_pointsPerOctave, accumalte, collected);
 
     if (m_openGL33CoreFunctions) {
+        if (m_fill) {
+            drawFill(verticiesCount);
+        }
         drawVertices(verticiesCount, GL_LINE_STRIP);
     } else {
         drawOpenGL2(verticiesCount, GL_LINE_STRIP);
@@ -378,6 +394,69 @@ void RTASeriesRenderer::renderBars()
         drawOpenGL2(verticesCollected, GL_TRIANGLES);
     }
 }
+void RTASeriesRenderer::drawFill(const GLsizei &count)
+{
+    // OpenGL 3.3 only; the line program has a geometry shader for lines, so the fill
+    // gets its own plain program
+    if (!m_openGL33CoreFunctions || count < 2) {
+        return;
+    }
+    if (!m_fillProgramReady) {
+        m_fillProgramReady = true;
+        m_fillProgram.addShaderFromSourceFile(QOpenGLShader::Vertex, ":/logx.vert");
+        m_fillProgram.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/color.frag");
+        if (!m_fillProgram.link()) {
+            emit Notifier::getInstance()->newMessage("RTASeriesRenderer", m_fillProgram.log());
+        }
+        m_fillColorUniform  = m_fillProgram.uniformLocation("m_color");
+        m_fillMatrixUniform = m_fillProgram.uniformLocation("matrix");
+        m_openGL33CoreFunctions->glGenBuffers(1, &m_fillVertexBufferId);
+        m_openGL33CoreFunctions->glGenVertexArrays(1, &m_fillVertexArrayId);
+    }
+    if (!m_fillProgram.isLinked()) {
+        return;
+    }
+
+    // triangle strip: each point and the same frequency far below the plot
+    constexpr GLfloat bottom = -1000.f;
+    m_fillVertices.resize(static_cast<size_t>(count) * 4);
+    for (GLsizei k = 0; k < count; ++k) {
+        const GLfloat x = m_vertices[2 * k];
+        GLfloat y = m_vertices[2 * k + 1];
+        if (!std::isfinite(y)) {
+            y = bottom;
+        }
+        m_fillVertices[4 * k + 0] = x;
+        m_fillVertices[4 * k + 1] = y;
+        m_fillVertices[4 * k + 2] = x;
+        m_fillVertices[4 * k + 3] = bottom;
+    }
+
+    m_program.release();
+    m_fillProgram.bind();
+    m_fillProgram.setUniformValue(m_fillMatrixUniform, m_matrix);
+    m_fillProgram.setUniformValue(m_fillColorUniform,
+                                  static_cast<GLfloat>(m_fillColor.redF()),
+                                  static_cast<GLfloat>(m_fillColor.greenF()),
+                                  static_cast<GLfloat>(m_fillColor.blueF()),
+                                  1.f);
+
+    m_openGL33CoreFunctions->glBindVertexArray(m_fillVertexArrayId);
+    m_openGL33CoreFunctions->glBindBuffer(GL_ARRAY_BUFFER, m_fillVertexBufferId);
+    m_openGL33CoreFunctions->glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * m_fillVertices.size(),
+                                          m_fillVertices.data(), GL_DYNAMIC_DRAW);
+    m_openGL33CoreFunctions->glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat),
+                                                   reinterpret_cast<const void *>(0));
+    m_openGL33CoreFunctions->glEnableVertexAttribArray(0);
+    m_openGL33CoreFunctions->glDrawArrays(GL_TRIANGLE_STRIP, 0, count * 2);
+    m_openGL33CoreFunctions->glDisableVertexAttribArray(0);
+    m_openGL33CoreFunctions->glBindVertexArray(0);
+
+    m_fillProgram.release();
+    m_program.bind();
+    // the line program's uniforms are kept by the program object
+}
+
 void RTASeriesRenderer::drawVertices(const GLsizei &count, const GLenum &mode)
 {
     if (m_refreshBuffers) {

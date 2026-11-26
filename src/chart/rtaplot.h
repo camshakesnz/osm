@@ -39,6 +39,8 @@ public:
     Q_PROPERTY(Chart::RTAPlot::Mode mode READ mode WRITE setMode NOTIFY modeChanged)
     Q_PROPERTY(bool showPeaks READ showPeaks WRITE setShowPeaks NOTIFY showPeaksChanged)
     Q_PROPERTY(Chart::RTAPlot::Scale scale READ scale WRITE setScale NOTIFY scaleChanged)
+    //! line mode: fill the area under the line (like Smaart)
+    Q_PROPERTY(bool fill READ fill WRITE setFill NOTIFY fillChanged)
 
 public:
     RTAPlot(Settings *settings, QQuickItem *parent = Q_NULLPTR);
@@ -54,6 +56,8 @@ public:
     void setShowPeaks(bool showPeaks);
 
     Scale scale() const;
+    bool fill() const;
+    void setFill(bool fill);
     void setScale(Scale newScale);
     void setScale(unsigned int newScale);
 
@@ -62,6 +66,7 @@ signals:
     void showPeaksChanged(bool);
     void modeChanged(Chart::RTAPlot::Mode);
     void scaleChanged(Chart::RTAPlot::Scale);
+    void fillChanged(bool);
 
 protected slots:
     void updateAxis();
@@ -74,6 +79,7 @@ private:
     Mode m_mode;
     Scale m_scale;
     bool m_spline, m_showPeaks;
+    bool m_fill = false;
 
     class TargetTraceItem : public PaintedItem
     {

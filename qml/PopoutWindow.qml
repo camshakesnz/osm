@@ -40,6 +40,8 @@ Window {
     minimumHeight: 200
     color: applicationAppearance.darkMode ? Material.backgroundColor : "#FFFFFF"
     Material.theme: applicationAppearance.darkMode ? Material.Dark : Material.Light
+    // darker than Material's dark grey, closer to Smaart
+    Material.background: applicationAppearance.darkMode ? "#161618" : "#FAFAFA"
     Material.accent: Material.Indigo
 
     // the meter tiles read this for their background

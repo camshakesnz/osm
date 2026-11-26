@@ -26,8 +26,8 @@ Rectangle {
     id: control
     property MeterPlot dataSource
     property var gridRef
-    border.color: "grey"
-    color: applicationWindow.backgroundColor
+    border.color: applicationAppearance.darkMode ? "#3a3a3a" : "grey"
+    color: applicationAppearance.darkMode ? "black" : applicationWindow.backgroundColor
 
     ColumnLayout {
         id: meter
