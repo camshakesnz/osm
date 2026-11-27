@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 import QtQuick 2.12
-import QtQuick.Controls 2.2
+import QtQuick.Controls 2.15
 import QtQuick.Controls.Material 2.2
 import QtGraphicalEffects 1.15
 import OpenSoundMeter 1.0
@@ -429,6 +429,52 @@ Item {
         ToolTip.visible: hovered
         ToolTip.text: qsTr("chart settings")
         ToolTip.delay: 600
+    }
+
+    // smoothing (fractional octave) for this chart only, like Smaart's "1/12 Oct" in the corner
+    MiniButton {
+        id: smoothingButton
+        readonly property bool available: chart.plot && chart.plot.pointsPerOctave !== undefined &&
+                                          chart.type != "Nyquist"
+        readonly property var options: chart.type == "Spectrum" ? [0, 1, 3, 6, 12, 24, 48] : [1, 3, 6, 12, 24, 48]
+        function label(ppo) {
+            return ppo > 0 ? "1/" + ppo + " oct" : qsTr("raw");
+        }
+        visible: available
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        anchors.rightMargin: 14
+        anchors.bottomMargin: 26
+        z: 10
+        height: 22
+        text: available ? label(chart.plot.pointsPerOctave) + " \u25BE" : ""
+        font.pixelSize: 11
+        font.bold: true
+        color: Qt.rgba(0, 0, 0, applicationAppearance.darkMode ? 0.6 : 0.08)
+        tooltip: qsTr("smoothing for this chart (fractional octave)")
+        onClicked: smoothingMenu.popup(smoothingButton, 0, smoothingButton.height)
+
+        Menu {
+            id: smoothingMenu
+            Repeater {
+                model: smoothingButton.options
+                MenuItem {
+                    text: smoothingButton.label(modelData)
+                    checkable: true
+                    checked: smoothingButton.available && chart.plot.pointsPerOctave === modelData
+                    onTriggered: {
+                        if (!chart.plot) {
+                            return;
+                        }
+                        // bars need bands
+                        if (modelData === 0 && chart.type == "Spectrum" && chart.plot.mode === 1) {
+                            chart.plot.mode = 0;
+                        }
+                        chart.plot.pointsPerOctave = modelData;
+                    }
+                }
+            }
+        }
     }
 
     // bottom left corner, where the axes leave a free square: clear of the type

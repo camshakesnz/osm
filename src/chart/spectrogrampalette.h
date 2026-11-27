@@ -87,11 +87,11 @@ inline Rgba color(float value, float min, float mid, float max, int type)
     // Heat: nothing below min (a short fade in over 10 dB), deep blue at min,
     // green at mid, then yellow, red and white at max.
     static constexpr std::array<Stop, 6> stops {{
-        {0.00f, 0.05f, 0.08f, 0.55f},   // min: deep blue
-        {0.50f, 0.10f, 0.35f, 1.00f},   //      blue
-        {1.00f, 0.10f, 0.80f, 0.15f},   // mid: green
-        {1.35f, 0.95f, 0.88f, 0.10f},   //      yellow
-        {1.65f, 1.00f, 0.16f, 0.08f},   //      red
+        {0.00f, 0.02f, 0.03f, 0.32f},   // min: deep navy
+        {0.50f, 0.05f, 0.18f, 0.78f},   //      blue
+        {1.00f, 0.05f, 0.60f, 0.10f},   // mid: green
+        {1.35f, 0.82f, 0.72f, 0.04f},   //      yellow
+        {1.65f, 0.90f, 0.14f, 0.04f},   //      red
         {2.00f, 1.00f, 1.00f, 1.00f},   // max: white
     }};
     constexpr float fade = 10.f;

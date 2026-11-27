@@ -150,8 +150,8 @@ the current view. When the window grows, the view's biggest chart takes the extr
 
 ## Spectrograph colours
 
-The spectrograph now uses heat colours by default: nothing (black) below the *min* level, then
-blue, green at *mid*, yellow, red, and white at *max*. Set min/mid/max in the chart's settings to
+The spectrograph now uses heat colours by default, in deep Smaart-like shades: nothing (black)
+below the *min* level, then navy and blue, green at *mid*, yellow, red, and white at *max*. Set min/mid/max in the chart's settings to
 suit the level of what you are measuring. *colours: classic* brings back the original look.
 
 ## Filled spectrum
@@ -164,3 +164,13 @@ in list order, so a later trace covers an earlier one where it is lower.
 
 Dark mode (View → Dark Mode, Ctrl+D) uses near-black panels and black SPL meters, closer to
 Smaart's dark look.
+
+## Smoothing per chart
+
+Every frequency chart (spectrum, magnitude, phase, coherence, group/phase delay, spectrograph,
+crest factor) has its own smoothing, shown in its bottom-right corner, e.g. **1/12 oct ▾**. Click it
+to choose 1/1 … 1/48 octave (or *raw* for the spectrum). It only changes that chart, and is saved
+with the view, so the magnitude can be 1/6 oct while the phase stays at 1/24, and the Live and TF
+views keep their own. (It is the same setting as *ppo*, points per octave, in the chart's settings.)
+The measurement's own settings (average type, LPF/FIFO, FFT size, window) are time averaging and
+resolution of the analysis, shared by every chart showing that measurement.
