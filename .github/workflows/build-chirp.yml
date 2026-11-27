@@ -131,6 +131,9 @@ jobs:
         run: |
           cd build
           macdeployqt OpenSoundMeter.app -qmldir=../qml
+          # Homebrew libraries pull in more libraries (freetype -> brotli...) that
+          # macdeployqt doesn't follow: bundle them all
+          python3 ../scripts/macos_fix_bundle.py OpenSoundMeter.app
           # Apple Silicon only runs signed code: macdeployqt edits the binaries, so re-sign
           # (ad hoc: no Apple account needed; first launch is right-click → Open)
           codesign --force --deep --sign - OpenSoundMeter.app
