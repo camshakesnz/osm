@@ -20,6 +20,7 @@
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QFile>
+#include <QSaveFile>
 #include <QFileInfo>
 
 #include "common/wavfile.h"
@@ -358,26 +359,27 @@ bool SourceList::save(const QUrl &fileName) const noexcept
         addSuffix = ".osm";
     }
 
-    QFile saveFile(fileName.toLocalFile() + addSuffix);
+    QJsonObject object;
+    {
+        auto guard = lock();
+        object["type"] = "sourcelsist";
+        object["list"] = toJSON();
+        object["selected"] = m_selected;
+    }
+
+    // write to a temporary file and swap it in, so a crash or a forced quit while
+    // saving (the autosave runs every few seconds) never leaves an empty session
+    QSaveFile saveFile(fileName.toLocalFile() + addSuffix);
     if (!saveFile.open(QIODevice::WriteOnly)) {
         qWarning("Couldn't open file");
         return false;
     }
-    auto guard = lock();
-
-    QJsonObject object;
-    object["type"] = "sourcelsist";
-
-    auto data = toJSON();
-    object["list"] = data;
-    object["selected"] = m_selected;
-
     QJsonDocument document(object);
-    if (saveFile.write(document.toJson(QJsonDocument::JsonFormat::Compact)) != -1) {
-        return true;
+    if (saveFile.write(document.toJson(QJsonDocument::JsonFormat::Compact)) == -1) {
+        saveFile.cancelWriting();
+        return false;
     }
-
-    return false;
+    return saveFile.commit();
 }
 bool SourceList::load(const QUrl &fileName) noexcept
 {

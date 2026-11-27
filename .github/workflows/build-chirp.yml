@@ -99,3 +99,35 @@ jobs:
         with:
           name: OpenSoundMeter-chirp-macos
           path: build/OpenSoundMeter.dmg
+
+  # Native Apple Silicon build (no Rosetta): Homebrew's Qt 5 is built for arm64
+  macos-arm64:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch upstream version tags
+        shell: bash
+        run: git fetch --tags https://github.com/psmokotnin/osm.git || true
+      - name: Install Qt 5 (Homebrew, arm64)
+        run: |
+          brew install qt@5
+          echo "$(brew --prefix qt@5)/bin" >> $GITHUB_PATH
+      - name: Build
+        run: |
+          qmake -v
+          mkdir build && cd build
+          qmake ../OpenSoundMeter.pro CONFIG+=release QMAKE_APPLE_DEVICE_ARCHS=arm64
+          make -j3
+          file OpenSoundMeter.app/Contents/MacOS/OpenSoundMeter
+      - name: Bundle Qt
+        run: |
+          cd build
+          macdeployqt OpenSoundMeter.app -qmldir=../qml -dmg
+          mv OpenSoundMeter.dmg OpenSoundMeter-AppleSilicon.dmg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OpenSoundMeter-chirp-macos-apple-silicon
+          path: build/OpenSoundMeter-AppleSilicon.dmg
+

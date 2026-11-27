@@ -504,7 +504,7 @@ ApplicationWindow {
             Item {
                 id: dockHost
                 Layout.fillWidth: true
-                Layout.preferredHeight: applicationWindow.settingsDocked ? 150 : 0
+                Layout.preferredHeight: applicationWindow.settingsDocked ? 150 + (dockBody.scrolling ? 12 : 0) : 0
                 visible: applicationWindow.settingsDocked
 
                 Rectangle {
@@ -532,7 +532,7 @@ ApplicationWindow {
                     tooltip: qsTr("show settings in a floating window instead")
                     onClicked: applicationWindow.settingsDocked = false
                 }
-                Item {
+                SettingsHost {
                     id: dockBody
                     anchors.fill: parent
                     anchors.topMargin: 24
@@ -568,8 +568,12 @@ ApplicationWindow {
     //Properties area: in the floating settings window, or docked along the bottom
     PropetiesBar {
         id: bottomtab
-        parent: applicationWindow.settingsDocked ? dockBody : floatBody
-        anchors.fill: parent
+        readonly property Flickable host: applicationWindow.settingsDocked ? dockBody : floatBody
+        parent: host.contentItem
+        // the settings rows are laid out for a wide panel: never squeeze them,
+        // scroll sideways instead when the window is narrow
+        width: Math.max(host.width, host.minimumContentWidth)
+        height: host.usableHeight
         shown: applicationWindow.settingsDocked || settingsWindow.opened
         onShowRequested: {
             if (!applicationWindow.settingsDocked && !settingsWindow.opened) {
@@ -586,7 +590,7 @@ ApplicationWindow {
         closePolicy: C2.Popup.CloseOnEscape
         padding: 0
         width: Math.min(applicationWindow.width - 16, 1180)
-        height: 176
+        height: 176 + (floatBody.scrolling ? 12 : 0)
 
         function clampPosition() {
             var ox = Number(applicationSettings.value("ui/settingsWindow/x", -1));
@@ -674,7 +678,7 @@ ApplicationWindow {
                 }
             }
 
-            Item {
+            SettingsHost {
                 id: floatBody
                 Layout.fillWidth: true
                 Layout.fillHeight: true

@@ -24,6 +24,8 @@
 	<string>NSApplication</string>
 	<key>NSSupportsAutomaticGraphicsSwitching</key>
         <false/>
+	<key>NSAppSleepDisabled</key>
+	<true/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Audio measurement</string>
 	<key>UISupportsDocumentBrowser</key>

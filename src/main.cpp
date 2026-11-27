@@ -22,6 +22,9 @@
 #include <QQmlContext>
 #include <QFontDatabase>
 #include "common/settings.h"
+#ifdef Q_OS_MACOS
+#include "common/appnap.h"
+#endif
 #include "common/logger.h"
 #include "common/notifier.h"
 #include "src/generator/generator.h"
@@ -73,6 +76,9 @@ int main(int argc, char *argv[])
 #endif
 
     QApplication app(argc, argv);
+#ifdef Q_OS_MACOS
+    disableAppNap();
+#endif
     QQuickStyle::setStyle("Material");
     QFontDatabase::addApplicationFont(":/fonts/Roboto/Regular.ttf");
     QFontDatabase::addApplicationFont(":/fonts/Roboto/Bold.ttf");

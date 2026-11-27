@@ -33,6 +33,7 @@
         <file alias="CommandBar.qml">qml/CommandBar.qml</file>
         <file alias="elements/MiniButton.qml">qml/elements/MiniButton.qml</file>
         <file alias="elements/ValueBox.qml">qml/elements/ValueBox.qml</file>
+        <file alias="elements/SettingsHost.qml">qml/elements/SettingsHost.qml</file>
         <file alias="Shortcuts.qml">qml/Shortcuts.qml</file>
         <file alias="source/Union.qml">qml/source/Union.qml</file>
         <file alias="source/UnionProperties.qml">qml/source/UnionProperties.qml</file>

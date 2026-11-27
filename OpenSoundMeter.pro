@@ -327,6 +327,10 @@ macx {
     SOURCES += \
         src/audio/plugins/coreaudio.cpp
 
+    HEADERS += src/common/appnap.h
+    SOURCES += src/common/appnap.mm
+    LIBS += -framework Foundation
+
     LIBS += \
         -framework CoreAudio \
         -framework AudioToolbox

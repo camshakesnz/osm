@@ -236,3 +236,14 @@ that only the **Loudness** chart and SPL meters should use. Its meters, the Loud
 numeric meters that pick it still work; spectrum, magnitude, phase, impulse, spectrograph and so
 on (in every view and pop-out window) ignore it. *Capture All* and the Spatial Avg captures skip
 it too. Click again to bring it back. The setting is saved with the session.
+
+# macOS notes
+
+- **Apple Silicon build**: the *OpenSoundMeter-chirp-macos-apple-silicon* download is a native
+  arm64 app (no Rosetta), built with Homebrew's Qt 5. Use it on M1/M2/M3/M4 Macs; the plain
+  *macos* download is the Intel build, which runs through Rosetta and is noticeably slower.
+- OSM now keeps itself out of **App Nap**, so macOS no longer slows its timers when the window is
+  in the background or covered (that made meters lag and measurements stall).
+- Sessions (including the autosave) are written to a temporary file and swapped in, so a crash
+  while saving can no longer leave an empty session.
+- The settings window no longer squeezes its controls in a narrow window: it scrolls sideways.
