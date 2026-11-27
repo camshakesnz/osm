@@ -67,10 +67,14 @@ while changed and passes < 10:
             if not os.path.islink(path) and is_macho(path):
                 files.append(path)
     for path in files:
-        for dep in deps(path):
+        for index, dep in enumerate(deps(path)):
             if not needs_fix(dep):
                 continue
             name = os.path.basename(dep)
+            if index == 0 and name == os.path.basename(path):
+                # the library's own id: only cosmetic, point it inside the bundle
+                run("install_name_tool", "-id", "@executable_path/../" + os.path.relpath(path, os.path.join(app, "Contents")), path)
+                continue
             if ".framework/" in dep:
                 # a Qt framework: macdeployqt bundles these, just point at the bundled one
                 rel = dep[dep.rfind("/", 0, dep.rfind(".framework/")) + 1:]
@@ -88,11 +92,7 @@ while changed and passes < 10:
                     print(f"+ bundled {name} (for {os.path.relpath(path, app)})")
                     changed = True
                 target = "@executable_path/../Frameworks/" + name
-            if os.path.basename(path) == name and dep == deps(path)[0]:
-                # the library's own id
-                run("install_name_tool", "-id", target, path)
-            else:
-                run("install_name_tool", "-change", dep, target, path)
+            run("install_name_tool", "-change", dep, target, path)
             changed = True
 
 # anything left pointing outside the bundle?
