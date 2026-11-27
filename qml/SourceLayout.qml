@@ -179,6 +179,9 @@ ListView {
                 }
             }
             onClicked: function (e) {
+                if (e.button === Qt.LeftButton) {
+                    applicationWindow.selectedSource = dragArea.source;
+                }
                 if (sideList.currentIndex !== index && e.button === Qt.LeftButton) {
                     sideList.currentIndex = index;
                     sideList.forceActiveFocus();

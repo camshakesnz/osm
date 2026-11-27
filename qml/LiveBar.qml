@@ -193,13 +193,6 @@ Item {
     Shortcut {
         sequence: "Ctrl+R"
         context: Qt.ApplicationShortcut
-        onActivated: {
-            for (var i = 0; i < sourceList.count; i++) {
-                let source = sourceList.get(i).data;
-                if (source && source.objectName === "Measurement"){
-                    source.resetAverage();
-                }
-            }
-        }
+        onActivated: applicationWindow.resetAverages()
     }
 }

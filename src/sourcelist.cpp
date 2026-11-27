@@ -26,6 +26,9 @@
 #include "filtersource.h"
 #include "measurement.h"
 #include "sourcelist.h"
+#include "math/alignment.h"
+#include "source/group.h"
+#include <complex>
 #include "model/sourcemodel.h"
 #include "source/equalizer.h"
 #include "source/group.h"
@@ -904,4 +907,77 @@ QColor SourceList::nextColor()
     }
 
     return m_colors.at(m_colorIndex);
+}
+
+Shared::Source SourceList::findDeep(const QUuid &id) const noexcept
+{
+    for (int i = 0; i < size(); ++i) {
+        auto item = get(i);
+        if (!item) {
+            continue;
+        }
+        if (item->uuid() == id) {
+            return item;
+        }
+        if (auto group = std::dynamic_pointer_cast<Source::Group>(item)) {
+            if (auto found = group->sourceList()->findDeep(id)) {
+                return found;
+            }
+        }
+    }
+    return {};
+}
+
+QVariantMap SourceList::alignment(const QUuid &aId, const QUuid &bId, double crossover, double maxMs) const
+{
+    QVariantMap out;
+    out["ok"] = false;
+    auto a = findDeep(aId);
+    auto b = findDeep(bId);
+    if (!a || !b || a == b) {
+        out["error"] = tr("choose two different traces");
+        return out;
+    }
+
+    std::vector<double> frequency;
+    std::vector<std::complex<double>> ra, rb;
+    a->lock();
+    b->lock();
+    const unsigned int size = a->frequencyDomainSize();
+    bool sameGrid = size > 1 && size == b->frequencyDomainSize();
+    if (sameGrid) {
+        frequency.reserve(size);
+        ra.reserve(size);
+        rb.reserve(size);
+        for (unsigned int i = 0; i < size; ++i) {
+            if (std::abs(a->frequency(i) - b->frequency(i)) > 0.01f * qMax(1.f, a->frequency(i))) {
+                sameGrid = false;
+                break;
+            }
+            const Complex pa = a->phase(i), pb = b->phase(i);
+            frequency.push_back(a->frequency(i));
+            ra.emplace_back(std::complex<double>(pa.real, pa.imag) * static_cast<double>(a->magnitudeRaw(i)));
+            rb.emplace_back(std::complex<double>(pb.real, pb.imag) * static_cast<double>(b->magnitudeRaw(i)));
+        }
+    }
+    b->unlock();
+    a->unlock();
+    if (!sameGrid) {
+        out["error"] = tr("the traces have different resolutions (FFT sizes or modes)");
+        return out;
+    }
+
+    const auto r = alignment::align(frequency, ra, rb, crossover, maxMs);
+    if (!r.ok) {
+        out["error"] = tr("no data around the crossover");
+        return out;
+    }
+    out["ok"] = true;
+    out["delayMs"] = r.delayMs;
+    out["invert"] = r.invert;
+    out["efficiency"] = r.efficiency;
+    out["currentEfficiency"] = r.currentEfficiency;
+    out["phaseDiff"] = r.phaseDiffDeg;
+    out["levelDiff"] = r.levelDiffDb;
+    return out;
 }

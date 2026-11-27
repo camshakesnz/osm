@@ -44,6 +44,10 @@ void SpectrogramPlot::setSettings(Settings *settings) noexcept
                                                         m_max).toInt());
     setColorScheme(m_settings->reactValue<SpectrogramPlot, int>("colors", this, &SpectrogramPlot::colorSchemeChanged,
                                                             m_colorScheme).toInt());
+    setAutoRange(m_settings->reactValue<SpectrogramPlot, bool>("autoRange", this, &SpectrogramPlot::autoRangeChanged,
+                                                               m_autoRange).toBool());
+    setAutoSpan(m_settings->reactValue<SpectrogramPlot, int>("autoSpan", this, &SpectrogramPlot::autoSpanChanged,
+                                                             m_autoSpan).toInt());
 }
 
 void SpectrogramPlot::storeSettings() noexcept
@@ -57,6 +61,35 @@ void SpectrogramPlot::storeSettings() noexcept
     m_settings->setValue("dBMid", m_mid);
     m_settings->setValue("dBMax", m_max);
     m_settings->setValue("colors", m_colorScheme);
+    m_settings->setValue("autoRange", m_autoRange);
+    m_settings->setValue("autoSpan", m_autoSpan);
+}
+
+bool SpectrogramPlot::autoRange() const
+{
+    return m_autoRange;
+}
+
+void SpectrogramPlot::setAutoRange(bool autoRange)
+{
+    if (m_autoRange != autoRange) {
+        m_autoRange = autoRange;
+        emit autoRangeChanged(m_autoRange);
+    }
+}
+
+int SpectrogramPlot::autoSpan() const
+{
+    return m_autoSpan;
+}
+
+void SpectrogramPlot::setAutoSpan(int span)
+{
+    span = span < 10 ? 10 : (span > 120 ? 120 : span);
+    if (m_autoSpan != span) {
+        m_autoSpan = span;
+        emit autoSpanChanged(m_autoSpan);
+    }
 }
 
 int SpectrogramPlot::colorScheme() const

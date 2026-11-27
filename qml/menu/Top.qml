@@ -243,6 +243,12 @@ MenuBar {
             onTriggered: applicationWindow.dataBarVisible = checked
         }
         MenuItem {
+            text: qsTr("&Command bar")
+            checkable: true
+            checked: applicationWindow.commandBarVisible
+            onTriggered: applicationWindow.commandBarVisible = checked
+        }
+        MenuItem {
             text: qsTr("Settings docked at the &bottom")
             checkable: true
             checked: applicationWindow.settingsDocked

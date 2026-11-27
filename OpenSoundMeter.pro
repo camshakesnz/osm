@@ -31,6 +31,7 @@ SOURCES += src/main.cpp \
     src/chart/phasedelayplot.cpp \
     src/chart/seriesesitem.cpp \
     src/chart/spectrogramplot.cpp \
+    src/math/alignment.cpp \
     src/chart/stepplot.cpp \
     src/chart/coherenceplot.cpp \
     src/chart/axis.cpp \
@@ -192,6 +193,7 @@ HEADERS += \
     src/chart/seriesitem.h \
     src/chart/spectrogramplot.h \
     src/chart/spectrogrampalette.h \
+    src/math/alignment.h \
     src/chart/stepplot.h \
     src/chart/coherenceplot.h \
     src/common/atomic.h \

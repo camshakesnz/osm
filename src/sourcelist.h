@@ -23,6 +23,7 @@
 #include <QString>
 #include <QUrl>
 #include <QPointer>
+#include <QVariantMap>
 #include "abstract/source.h"
 #include "shared/source_shared.h"
 
@@ -138,6 +139,16 @@ public slots:
     Q_INVOKABLE void appendCapture(const Shared::Source &item);
     //! folder (a group's list) that new captures go into; null for the top level
     Q_INVOKABLE void setCaptureList(SourceList *list);
+
+    /**
+     * Main + sub alignment: how A and B (transfer functions) sum around `crossover`,
+     * and (if maxMs > 0) the delay / polarity change for B that sums best.
+     * Returns ok, delayMs, invert, efficiency, currentEfficiency, phaseDiff, levelDiff, error.
+     * A and B can be anywhere in the list, including inside folders.
+     */
+    Q_INVOKABLE QVariantMap alignment(const QUuid &a, const QUuid &b, double crossover, double maxMs) const;
+    //! find a source by id here or inside any folder
+    Q_INVOKABLE Shared::Source findDeep(const QUuid &id) const noexcept;
 
     //! store a measurement's result when its chirp set finishes (owning lists only,
     //! not the mirrored copies used by charts, or every result would be stored twice)

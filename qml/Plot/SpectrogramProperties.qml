@@ -159,7 +159,37 @@ Item {
             onCurrentIndexChanged: dataObject.pointsPerOctave = model[currentIndex];
         }
 
+        CheckBox {
+            text: qsTr("auto")
+            checked: dataObject.autoRange
+            onClicked: dataObject.autoRange = checked
+            ToolTip.visible: hovered
+            ToolTip.text: qsTr("colours follow the level of the signal: white at the recent peak")
+        }
+
         SelectableSpinBox {
+            visible: dataObject.autoRange
+            value: dataObject.autoSpan
+            onValueChanged: dataObject.autoSpan = value
+            from: 10
+            to: 120
+            editable: true
+            Layout.fillWidth: true
+
+            ToolTip.visible: hovered
+            ToolTip.text: qsTr("range shown: dB from the peak (white) down to nothing")
+
+            textFromValue: function(value, locale) {
+                return Number(value) + "dB range"
+            }
+
+            valueFromText: function(text, locale) {
+                return parseInt(text)
+            }
+        }
+
+        SelectableSpinBox {
+            visible: !dataObject.autoRange
             value: dataObject.min
             onValueChanged: dataObject.min = value
             from: -140
@@ -185,6 +215,7 @@ Item {
         }
 
         SelectableSpinBox {
+            visible: !dataObject.autoRange
             value: dataObject.mid
             onValueChanged: dataObject.mid = value
             from: dataObject.min
@@ -211,6 +242,7 @@ Item {
         }
 
         SelectableSpinBox {
+            visible: !dataObject.autoRange
             value: dataObject.max
             onValueChanged: dataObject.max = value
             from: dataObject.mid + 1

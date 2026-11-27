@@ -18,6 +18,7 @@
 #ifndef CHART_SPECTROGRAMSERIESNODE_H
 #define CHART_SPECTROGRAMSERIESNODE_H
 
+#include "../spectrogrampalette.h"
 #include "xyseriesnode.h"
 #include "../frequencybasedserieshelper.h"
 #include <QElapsedTimer>
@@ -55,6 +56,9 @@ private:
     bool m_refreshBuffers, m_plotActive;
     int m_min, m_mid, m_max;
     int m_colorScheme = 0;
+    bool m_autoRange = true;
+    int m_autoSpan = 50;
+    SpectrogramPalette::AutoRange m_autoLevels;
     unsigned int m_pointsPerOctave;
     unsigned int m_sourceSize;
     QElapsedTimer m_timer;

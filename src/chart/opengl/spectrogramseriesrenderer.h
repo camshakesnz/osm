@@ -18,6 +18,7 @@
 #ifndef SPECTROGRAMSERIESRENDERER_H
 #define SPECTROGRAMSERIESRENDERER_H
 
+#include "../spectrogrampalette.h"
 #include <deque>
 #include <array>
 #include <QQuickFramebufferObject>
@@ -48,6 +49,9 @@ protected:
 private:
     int m_min, m_mid, m_max;
     int m_colorScheme = 0;
+    bool m_autoRange = true;
+    int m_autoSpan = 50;
+    SpectrogramPalette::AutoRange m_autoLevels;
     unsigned int m_pointsPerOctave;
     QElapsedTimer m_timer;
 

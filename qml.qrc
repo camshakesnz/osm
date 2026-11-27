@@ -29,6 +29,8 @@
         <file alias="LiveBar.qml">qml/LiveBar.qml</file>
         <file alias="DataBar.qml">qml/DataBar.qml</file>
         <file alias="ViewBar.qml">qml/ViewBar.qml</file>
+        <file alias="Tools.qml">qml/Tools.qml</file>
+        <file alias="CommandBar.qml">qml/CommandBar.qml</file>
         <file alias="elements/MiniButton.qml">qml/elements/MiniButton.qml</file>
         <file alias="elements/ValueBox.qml">qml/elements/ValueBox.qml</file>
         <file alias="Shortcuts.qml">qml/Shortcuts.qml</file>

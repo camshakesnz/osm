@@ -67,17 +67,92 @@ ApplicationWindow {
         }
     }
 
+    //! big buttons along the bottom (Capture, Average, Align...)
+    property bool commandBarVisible: boolSetting("ui/commandBar", true)
+    onCommandBarVisibleChanged: applicationSettings.setValue("ui/commandBar", commandBarVisible)
+    //! the trace last clicked in either list (for dB +/-, Capture)
+    property var selectedSource: null
+
+    function forEachSource(list, fn) {
+        for (var i = 0; i < list.count; ++i) {
+            var s = list.get(i);
+            if (!s || !s.data) {
+                continue;
+            }
+            fn(s);
+            if (s.data.objectName === "Group" && s.data.sourceList) {
+                forEachSource(s.data.sourceList, fn);
+            }
+        }
+    }
+    //! "Measure @ 14:34", then "Measure @ 14:34 (2)"... so captures can be told apart
+    function uniqueName(name) {
+        var taken = {};
+        forEachSource(sourceList, function(s) { taken[s.data.name] = true; });
+        if (!taken[name]) {
+            return name;
+        }
+        for (var n = 2; ; ++n) {
+            if (!taken[name + " (" + n + ")"]) {
+                return name + " (" + n + ")";
+            }
+        }
+    }
+    function storeMeasurement(source) {
+        var stored = source.store();
+        if (stored && stored.data) {
+            stored.data.autoName(source.name);
+            stored.data.name = uniqueName(stored.data.name);
+            stored.data.active = true;
+            sourceList.appendCapture(stored);
+        }
+    }
+    //! Capture: the selected measurement, or the first active one
+    function captureSelected() {
+        var s = selectedSource && selectedSource.data ? selectedSource.data : null;
+        if (s && s.objectName === "Measurement") {
+            storeMeasurement(s);
+            return;
+        }
+        for (var i = 0; i < sourceList.count; i++) {
+            var m = sourceList.get(i).data;
+            if (m && m.active && m.objectName === "Measurement") {
+                storeMeasurement(m);
+                return;
+            }
+        }
+    }
+    function resetAverages() {
+        for (var i = 0; i < sourceList.count; i++) {
+            var m = sourceList.get(i).data;
+            if (m && m.objectName === "Measurement") {
+                m.resetAverage();
+            }
+        }
+    }
+    //! dB + / dB -: gain offset of the selected trace
+    function nudgeGain(delta) {
+        var s = selectedSource && selectedSource.data ? selectedSource.data : null;
+        if (!s || s.gain === undefined) {
+            message.showError(qsTr("Click a trace or measurement first."));
+            return;
+        }
+        s.gain = Math.round((s.gain + delta) * 10) / 10;
+    }
+    function clearAllDb() {
+        forEachSource(sourceList, function(s) {
+            if (s.data.objectName === "Stored") {
+                s.data.gain = 0;
+            }
+        });
+    }
+
     //! store every active measurement (Ctrl+X, Capture)
     function captureAll() {
         for (var i = 0; i < sourceList.count; i++) {
             let source = sourceList.get(i).data;
             if (source && source.active && source.objectName === "Measurement") {
-                var stored = source.store();
-                if (stored && stored.data) {
-                    stored.data.autoName(source.name);
-                    stored.data.active = true;
-                    sourceList.appendCapture(stored);
-                }
+                storeMeasurement(source);
             }
         }
     }
@@ -388,8 +463,13 @@ ApplicationWindow {
 
     readonly property color dividerColor: Qt.rgba(Material.foreground.r, Material.foreground.g, Material.foreground.b, 0.12)
 
+    ColumnLayout {
+    anchors.fill: parent
+    spacing: 0
+
     RowLayout {
-        anchors.fill: parent
+        Layout.fillWidth: true
+        Layout.fillHeight: true
         spacing: 0
 
         // stored traces, folders, files
@@ -471,6 +551,17 @@ ApplicationWindow {
             Layout.fillHeight: true
             Layout.preferredWidth: 262
         }
+    }
+
+    CommandBar {
+        Layout.fillWidth: true
+        Layout.preferredHeight: implicitHeight
+        visible: applicationWindow.commandBarVisible
+    }
+    }
+
+    Tools {
+        id: tools
     }
 
     //Properties area: in the floating settings window, or docked along the bottom

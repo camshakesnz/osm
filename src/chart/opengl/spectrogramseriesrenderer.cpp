@@ -68,6 +68,8 @@ void SpectrogramSeriesRenderer::synchronize(QQuickFramebufferObject *item)
         m_mid = plot->mid();
         m_max = plot->max();
         m_colorScheme = plot->colorScheme();
+        m_autoRange = plot->autoRange();
+        m_autoSpan = plot->autoSpan();
         m_active = plot->active();
     }
 }
@@ -91,6 +93,12 @@ void SpectrogramSeriesRenderer::renderSeries()
     row.time = static_cast<int>(m_timer.restart());
     row.data.reserve(m_pointsPerOctave * 11);
     float value = 0.f;
+    // automatic levels follow the recent peak (one row behind, which nobody can see)
+    int levelMin = m_min, levelMid = m_mid, levelMax = m_max;
+    if (m_autoRange) {
+        m_autoLevels.thresholds(static_cast<float>(m_autoSpan), levelMin, levelMid, levelMax);
+    }
+    float rowPeak = -1000.f;
     auto accumalte = [m_source = m_source, &value] (const unsigned int &i) {
         if (i == 0) {
             return ;
@@ -105,8 +113,11 @@ void SpectrogramSeriesRenderer::renderSeries()
         if (!std::isnormal(value)) {
             value = floor;
         }
-        const auto c = SpectrogramPalette::color(value, static_cast<float>(m_min), static_cast<float>(m_mid),
-                                                 static_cast<float>(m_max), m_colorScheme);
+        if (value > rowPeak) {
+            rowPeak = value;
+        }
+        const auto c = SpectrogramPalette::color(value, static_cast<float>(levelMin), static_cast<float>(levelMid),
+                                                 static_cast<float>(levelMax), m_colorScheme);
         historyPoint rgb;
         rgb[0] = (start + end) / 2.f;
         rgb[1] = c.r;
@@ -122,6 +133,7 @@ void SpectrogramSeriesRenderer::renderSeries()
         iterate(m_pointsPerOctave, accumalte, collected);
 
         //TODO: change to fifo instead of deque
+        m_autoLevels.update(rowPeak, row.time / 1000.f);
         history.push_back(std::move(row));
         if (history.size() > 51) {
             history.pop_front();

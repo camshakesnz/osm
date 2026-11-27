@@ -174,3 +174,56 @@ with the view, so the magnitude can be 1/6 oct while the phase stays at 1/24, an
 views keep their own. (It is the same setting as *ppo*, points per octave, in the chart's settings.)
 The measurement's own settings (average type, LPF/FIFO, FFT size, window) are time averaging and
 resolution of the analysis, shared by every chart showing that measurement.
+
+# Tuning tools
+
+## Command bar
+
+Big buttons along the bottom of the window (View → Command bar to hide it):
+
+- **Data Bar**: show/hide the stored traces on the left.
+- **Capture**: store the measurement you last clicked (or the first active one).
+  **Capture All**: store every active measurement. Captures with the same name get (2), (3)…
+- **Reset Avg**: restart averaging on every measurement.
+- **Spatial Avg**: guided spatial averaging (below).
+- **Average…**, **Compare…**, **Align…**: the tools below.
+- **dB − / dB +**: move the trace you last clicked down/up 1 dB (Shift: 0.1 dB).
+  **Clear dB** puts every stored trace back to 0 dB.
+
+## Spatial averaging
+
+Click **Spatial Avg**. A new folder ("Spatial avg 14:36") opens in the data bar. Each capture
+(Capture, Capture All, or a chirp set with auto store) now goes into it as *Pos 1*, *Pos 2*…, and
+from the second position on there is a running average (a math source named like the folder) that
+updates as you add positions. Move the mic, capture (or fire a chirp set), repeat. Click the button
+again (it shows the number of positions) to finish. The average is a dB average; change it to
+Power in its ⚙ settings if you prefer.
+
+**Average…** averages any traces you tick, including live measurements (e.g. three mics at once).
+
+## Compare before / after
+
+**Compare…** picks a *before* and an *after* trace (the two newest captures by default) and makes a
+difference trace, after − before. Look at it on a magnitude chart: 0 dB = no change, above 0 = the
+change added level there. Handy to confirm a DSP EQ change did what you meant.
+
+## Main + sub alignment
+
+1. Capture the main alone and the sub alone (same measurement settings, same mic position).
+2. **Align…**, pick the main and the sub, set the crossover frequency (type it, or scroll: 1/12
+   octave steps, Shift 1/24).
+3. The box shows the phase difference at the crossover, how well they sum around it (one third
+   of an octave either side; 100% = fully in phase), and the level difference.
+4. **Find best delay** searches ±10 ms and polarity for the best sum, preferring the smallest
+   change, and applies it to the sub capture (virtually). You can also change the sub's delay,
+   polarity and gain by hand and watch the numbers.
+5. **Show sum** adds a trace of main + sub as they would combine (magnitude and phase), which
+   follows your changes.
+6. Put the same delay/polarity into the sub's DSP channel, then measure the real thing to verify.
+
+## Spectrograph auto range
+
+The spectrograph's **auto** levels (on by default, in its ⚙ settings) follow the signal: steady
+levels sit in the greens, anything louder than the recent peak goes red, white for 12 dB over,
+and nothing (black) more than the *range* below the peak. A quiet room or silence stays dark.
+Untick *auto* to use fixed min/mid/max levels.

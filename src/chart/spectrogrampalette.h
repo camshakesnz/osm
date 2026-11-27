@@ -110,6 +110,57 @@ inline Rgba color(float value, float min, float mid, float max, int type)
     return {1.f, 1.f, 1.f, 1.f};
 }
 
+/**
+ * Automatic levels: follow the loudest part of the recent spectrum, so the colours
+ * suit whatever is playing (like Smaart's dynamic thresholds). Green sits just below
+ * the recent peak, red above it, white 12 dB above it and nothing below `span`.
+ */
+struct AutoRange {
+    float peak = -1000.f;
+
+    //! call once per row with the loudest cell of that row
+    void update(float rowPeak, float seconds)
+    {
+        constexpr float attack  = 15.f; // dB per second: sudden peaks show hot before it catches up
+        constexpr float release = 4.f;  // dB per second
+        if (!(rowPeak > -130.f)) {
+            rowPeak = -130.f; // silence: let the peak fall
+        }
+        const float dt = seconds > 0.f ? (seconds < 1.f ? seconds : 1.f) : 0.f;
+        if (peak < -500.f) {
+            peak = rowPeak; // first row
+        } else if (rowPeak > peak) {
+            float risen = peak + attack * dt;
+            // never more than 12 dB behind: a big jump (e.g. the generator coming on)
+            // flashes white for a moment instead of for seconds
+            if (risen < rowPeak - 12.f) {
+                risen = rowPeak - 12.f;
+            }
+            peak = risen < rowPeak ? risen : rowPeak;
+        } else {
+            const float fallen = peak - release * dt;
+            peak = fallen > rowPeak ? fallen : rowPeak;
+        }
+    }
+
+    void thresholds(float span, int &min, int &mid, int &max) const
+    {
+        if (!(peak > -200.f)) {
+            return; // nothing yet: keep the manual levels
+        }
+        if (span < 10.f) {
+            span = 10.f;
+        }
+        // don't chase silence or a quiet noise floor all the way down: it should stay dark
+        const float top = peak > -100.f ? peak : -100.f;
+        // steady levels sit in the greens and yellows, anything above the recent peak
+        // goes red, and white 12 dB above it
+        max = static_cast<int>(top + 12.f);
+        mid = static_cast<int>(top - 6.f);
+        min = static_cast<int>(top - span);
+    }
+};
+
 } // namespace SpectrogramPalette
 } // namespace Chart
 

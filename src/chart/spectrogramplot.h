@@ -31,6 +31,10 @@ class SpectrogramPlot : public FrequencyBasedPlot
     Q_PROPERTY(bool active READ active WRITE setActive NOTIFY activeChanged)
     //! 0: heat (black, blue, green, red, white), 1: classic
     Q_PROPERTY(int colorScheme READ colorScheme WRITE setColorScheme NOTIFY colorSchemeChanged)
+    //! follow the level of the signal instead of fixed min/mid/max
+    Q_PROPERTY(bool autoRange READ autoRange WRITE setAutoRange NOTIFY autoRangeChanged)
+    //! auto range: dB from white down to nothing
+    Q_PROPERTY(int autoSpan READ autoSpan WRITE setAutoSpan NOTIFY autoSpanChanged)
 
 public:
     SpectrogramPlot(Settings *settings, QQuickItem *parent = Q_NULLPTR);
@@ -48,6 +52,10 @@ public:
 
     bool active() const;
     int colorScheme() const;
+    bool autoRange() const;
+    void setAutoRange(bool autoRange);
+    int autoSpan() const;
+    void setAutoSpan(int span);
     QColor plotAreaColor() const override;
     void setColorScheme(int scheme);
     void setActive(bool active);
@@ -58,6 +66,8 @@ signals:
     void maxChanged(int);
     void activeChanged(bool);
     void colorSchemeChanged(int);
+    void autoRangeChanged(bool);
+    void autoSpanChanged(int);
 
 protected:
     virtual SeriesItem *createSeriesFromSource(const Shared::Source &source) override;
@@ -65,6 +75,8 @@ protected:
     int m_min, m_mid, m_max;
     bool m_active;
     int m_colorScheme;
+    bool m_autoRange = true;
+    int m_autoSpan = 50;
 };
 }
 #endif // SPECTROGRAMPLOT_H
