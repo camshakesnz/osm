@@ -135,6 +135,25 @@ jobs:
           # (ad hoc: no Apple account needed; first launch is right-click → Open)
           codesign --force --deep --sign - OpenSoundMeter.app
           codesign --verify --deep --strict OpenSoundMeter.app && echo "signature ok"
+      - name: Inspect bundle
+        run: |
+          cd build/OpenSoundMeter.app/Contents
+          echo "--- qt.conf"; cat Resources/qt.conf || true
+          echo "--- plugins"; ls -R PlugIns | head -60
+          echo "--- cocoa plugin links"; otool -L PlugIns/platforms/libqcocoa.dylib || true
+          echo "--- links still pointing at Homebrew"
+          find . -type f \( -name "*.dylib" -o -perm +111 \) -exec sh -c 'otool -L "$1" 2>/dev/null | grep -q /opt/homebrew && echo "$1"' _ {} \; | head -20
+      - name: Smoke test (launch for 15 s)
+        run: |
+          cd build
+          QT_DEBUG_PLUGINS=1 ./OpenSoundMeter.app/Contents/MacOS/OpenSoundMeter > smoke.log 2>&1 &
+          PID=$!
+          sleep 15
+          if kill -0 $PID 2>/dev/null; then echo "still running: OK"; kill $PID; else echo "EXITED EARLY"; tail -80 smoke.log; exit 1; fi
+          grep -iE "cocoa|platform plugin|fatal" smoke.log | head -20 || true
+      - name: Make dmg
+        run: |
+          cd build
           hdiutil create -volname OpenSoundMeter -srcfolder OpenSoundMeter.app -ov -format UDZO OpenSoundMeter-AppleSilicon.dmg
       - uses: actions/upload-artifact@v4
         with:
