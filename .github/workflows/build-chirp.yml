@@ -118,9 +118,13 @@ jobs:
         run: |
           qmake -v
           mkdir build && cd build
-          qmake ../OpenSoundMeter.pro CONFIG+=release QMAKE_APPLE_DEVICE_ARCHS=arm64
-          make -j3
+          # Metal charts (like the official Mac release); OpenGL on macOS is emulated and slow
+          GRAPH_BACKEND=METAL qmake ../OpenSoundMeter.pro CONFIG+=release QMAKE_APPLE_DEVICE_ARCHS=arm64
+          make -j3 2>&1 | tee build.log | grep -E "error|warning: unused" || true
+          test -f OpenSoundMeter.app/Contents/MacOS/OpenSoundMeter || (tail -60 build.log; exit 1)
+          grep -c "GRAPH_METAL" build.log
           file OpenSoundMeter.app/Contents/MacOS/OpenSoundMeter
+          otool -l OpenSoundMeter.app/Contents/MacOS/OpenSoundMeter | grep -A3 LC_BUILD_VERSION | head -4
       - name: Bundle Qt
         run: |
           cd build
