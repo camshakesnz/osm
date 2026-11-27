@@ -105,6 +105,17 @@ jobs:
   # Native Apple Silicon build (no Rosetta): Homebrew's Qt 5 is built for arm64
   macos-arm64:
     runs-on: macos-15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # OpenGL: Qt 5's mature scene graph renderer, the same one Windows and the
+          # Intel Mac use. Qt 5.15's Metal path (RHI) is a tech preview and dropped text
+          # until it was redrawn
+          - backend: OPENGL
+            suffix: ""
+          - backend: METAL
+            suffix: "-metal"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -120,11 +131,10 @@ jobs:
         run: |
           qmake -v
           mkdir build && cd build
-          # Metal charts (like the official Mac release); OpenGL on macOS is emulated and slow
-          GRAPH_BACKEND=METAL qmake ../OpenSoundMeter.pro CONFIG+=release QMAKE_APPLE_DEVICE_ARCHS=arm64
+          GRAPH_BACKEND=${{ matrix.backend }} qmake ../OpenSoundMeter.pro CONFIG+=release QMAKE_APPLE_DEVICE_ARCHS=arm64
           make -j3 2>&1 | tee build.log | grep -E "error|warning: unused" || true
           test -f OpenSoundMeter.app/Contents/MacOS/OpenSoundMeter || (tail -60 build.log; exit 1)
-          grep -c "GRAPH_METAL" build.log
+          grep -c "GRAPH_${{ matrix.backend }}" build.log
           file OpenSoundMeter.app/Contents/MacOS/OpenSoundMeter
           otool -l OpenSoundMeter.app/Contents/MacOS/OpenSoundMeter | grep -A3 LC_BUILD_VERSION | head -4
       - name: Bundle Qt
@@ -157,9 +167,9 @@ jobs:
       - name: Make dmg
         run: |
           cd build
-          hdiutil create -volname OpenSoundMeter -srcfolder OpenSoundMeter.app -ov -format UDZO OpenSoundMeter-AppleSilicon.dmg
+          hdiutil create -volname OpenSoundMeter -srcfolder OpenSoundMeter.app -ov -format UDZO OpenSoundMeter-AppleSilicon${{ matrix.suffix }}.dmg
       - uses: actions/upload-artifact@v4
         with:
-          name: OpenSoundMeter-chirp-macos-apple-silicon
-          path: build/OpenSoundMeter-AppleSilicon.dmg
+          name: OpenSoundMeter-chirp-macos-apple-silicon${{ matrix.suffix }}
+          path: build/OpenSoundMeter-AppleSilicon${{ matrix.suffix }}.dmg
 
