@@ -59,6 +59,9 @@ private:
     bool m_autoRange = true;
     int m_autoSpan = 50;
     SpectrogramPalette::AutoRange m_autoLevels;
+    //! rows added / rows in the GPU buffers: rebuild the mesh only when they differ
+    unsigned long m_historySerial = 0, m_builtSerial = ~0ul;
+    unsigned int m_builtIndices = 0;
     unsigned int m_pointsPerOctave;
     unsigned int m_sourceSize;
     QElapsedTimer m_timer;

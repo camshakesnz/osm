@@ -17,6 +17,7 @@
  */
 
 #include "data.h"
+#include <cmath>
 
 namespace Abstract {
 
@@ -59,6 +60,14 @@ float Data::frequency(unsigned int i) const noexcept
         return m_ftdata[i].frequency;
     }
     return 0;
+}
+
+float Data::rawModule(unsigned int i) const noexcept
+{
+    if (i < frequencyDomainSize() && !std::isnan(m_ftdata[i].rawModule)) {
+        return m_ftdata[i].rawModule;
+    }
+    return module(i);
 }
 
 float Data::module (unsigned int i) const noexcept {

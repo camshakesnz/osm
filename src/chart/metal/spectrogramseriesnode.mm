@@ -131,7 +131,8 @@ void SpectrogramSeriesNode::updateHistory()
         if (i == 0) {
             return ;
         }
-        value += m_source->module(i) * m_source->module(i);
+        const float level = m_source->rawModule(i);
+        value += level * level;
     };
     auto collected = [&] (const float & start, const float & end, const unsigned int &) {
 
@@ -157,7 +158,11 @@ void SpectrogramSeriesNode::updateHistory()
     };
 
     if (m_plotActive) {
+        // the measurement thread writes this data: read it under its lock
+        m_source->lock();
         iterate(m_pointsPerOctave, accumalte, collected);
+        m_source->unlock();
+        ++m_historySerial;
 
         m_autoLevels.update(rowPeak, row.time / 1000.f);
         m_history.push_back(std::move(row));
@@ -179,6 +184,28 @@ void SpectrogramSeriesNode::renderSeries()
 
     unsigned int maxBufferSize = MAX_HISTORY * (m_pointsPerOctave * 12 + 4) * 6,
                  verticiesCount = 0, maxIndicesCount = 0, indicesCount = 0;
+
+    // nothing new since the last frame: draw the mesh already in the buffers
+    const bool reuse = !m_refreshBuffers && m_builtSerial == m_historySerial &&
+                       m_vertexBuffer && m_indiciesBuffer && m_builtIndices > 0;
+    if (reuse) {
+        void *matrix_ptr = [id_cast(MTLBuffer, m_matrixBuffer) contents];
+        if (matrix_ptr) {
+            m_matrix.copyDataTo(static_cast<float *>(matrix_ptr));
+        }
+        auto encoder = id_cast(MTLRenderCommandEncoder, commandEncoder());
+        [encoder setVertexBuffer: id_cast(MTLBuffer, m_vertexBuffer) offset: 0 atIndex: 0];
+        [encoder setVertexBuffer: id_cast(MTLBuffer, m_matrixBuffer) offset: 0 atIndex: 1];
+        [encoder setRenderPipelineState: id_cast(MTLRenderPipelineState, m_pipeline)];
+        [encoder drawIndexedPrimitives: MTLPrimitiveTypeTriangleStrip
+                 indexCount: m_builtIndices
+                 indexType: MTLIndexTypeUInt32
+                 indexBuffer: id_cast(MTLBuffer, m_indiciesBuffer)
+                 indexBufferOffset: 0
+                ];
+        [encoder endEncoding];
+        return;
+    }
 
     if (m_refreshBuffers) {
         [id_cast(MTLBuffer, m_vertexBuffer) release];
@@ -266,6 +293,8 @@ void SpectrogramSeriesNode::renderSeries()
 
     [encoder endEncoding];
     m_refreshBuffers = false;
+    m_builtSerial = m_historySerial;
+    m_builtIndices = indicesCount;
 }
 
 void SpectrogramSeriesNode::updateMatrix()

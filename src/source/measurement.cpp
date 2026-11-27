@@ -653,6 +653,9 @@ void Measurement::averaging()
             magnitude = 0.f;
         }
 
+        // the spectrograph shows what is happening now, whatever the averaging
+        m_ftdata[i].rawModule = calibratedA;
+
         switch (averageType()) {
         case AverageType::Off:
             m_ftdata[i].magnitude = magnitude;

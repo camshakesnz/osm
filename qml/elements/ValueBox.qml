@@ -88,7 +88,9 @@ Rectangle {
         }
     }
 
-    ToolTip.visible: tooltip.length > 0 && hoverArea.containsMouse && !input.activeFocus
-    ToolTip.text: tooltip
-    ToolTip.delay: 600
+    ToolTip {
+        visible: box.tooltip.length > 0 && hoverArea.containsMouse && !input.activeFocus
+        text: box.tooltip
+        delay: 600
+    }
 }

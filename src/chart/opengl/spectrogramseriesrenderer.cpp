@@ -104,7 +104,8 @@ void SpectrogramSeriesRenderer::renderSeries()
             return ;
         }
 
-        value += m_source->module(i) * m_source->module(i);
+        const float level = m_source->rawModule(i);
+        value += level * level;
     };
     auto collected = [&] (const float & start, const float & end, const unsigned int &) {
 

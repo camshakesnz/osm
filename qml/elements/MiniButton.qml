@@ -57,7 +57,11 @@ Rectangle {
         }
     }
 
-    ToolTip.visible: control.tooltip.length > 0 && mouse.containsMouse
-    ToolTip.text: control.tooltip
-    ToolTip.delay: 600
+    // its own tooltip, not the window's shared one: the shared one is handed from
+    // item to item and on macOS could leave a button blank after it closed
+    ToolTip {
+        visible: control.tooltip.length > 0 && mouse.containsMouse
+        text: control.tooltip
+        delay: 600
+    }
 }

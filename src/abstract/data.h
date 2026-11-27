@@ -41,6 +41,8 @@ struct Data {
         float   coherence   = 0;
         float   peakSquared = 0;
         float   meanSquared = NAN;
+        //! module before the measurement's averaging (NaN: not available, use module)
+        float   rawModule   = NAN;
     };
 
     struct TimeData {
@@ -56,6 +58,8 @@ struct Data {
     void            setFrequencyDomainSize(unsigned int size);
     float           frequency(   unsigned int i) const noexcept;
     virtual float   module(      unsigned int i) const noexcept;
+    //! module without time averaging, for the spectrograph; falls back to module()
+    float           rawModule(   unsigned int i) const noexcept;
     virtual float   magnitude(   unsigned int i) const noexcept;
     virtual float   magnitudeRaw(unsigned int i) const noexcept;
     virtual Complex phase(       unsigned int i) const noexcept;

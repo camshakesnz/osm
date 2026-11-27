@@ -337,6 +337,7 @@ ListView {
                     font.family: "Osm"
                     text: "\ue801"
                     anchors.right: parent.right
+                    anchors.rightMargin: 8 // inside the block's border
                     opacity: dragArea.containsMouse || hovered ? 1 : 0
                     // centred on the name row, like the gear
                     anchors.verticalCenter: parent.top

@@ -125,7 +125,7 @@ Item {
             // drawn on the charts, or only running (meters, loudness)
             MiniButton {
                 id: chartsToggle
-                Layout.rightMargin: 74 // clear of the gear / clone / delete buttons
+                Layout.rightMargin: 82 // clear of the gear / clone / delete buttons
                 Layout.preferredWidth: 22
                 Layout.preferredHeight: 18
                 readonly property bool shown: dataModelData && !dataModelData.chartHidden
