@@ -159,6 +159,14 @@ bool SeriesesItem::appendDataSource(const Shared::Source &source)
         sourceItem->setParentItem(this);
         m_serieses.append(sourceItem);
         item = static_cast<QQuickItem *>(sourceItem);
+
+        // a source can run without being drawn (e.g. a stream feed for the loudness meter)
+        auto *raw = source.get();
+        sourceItem->setVisible(!raw->chartHidden());
+        connect(raw, &Abstract::Source::chartHiddenChanged, sourceItem, [sourceItem](bool hidden) {
+            sourceItem->setVisible(!hidden);
+            sourceItem->update();
+        });
     }
 
     applyWidthForSeries(item);

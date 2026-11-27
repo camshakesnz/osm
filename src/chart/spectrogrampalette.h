@@ -58,8 +58,8 @@ inline Rgba mix(const Stop &first, const Stop &second, float position)
 inline Rgba color(float value, float min, float mid, float max, int type)
 {
     constexpr float floor = -140.f;
-    if (!(value > floor)) {
-        value = floor;
+    if (!(value > floor + 1.f)) {
+        return {0.f, 0.f, 0.f, 0.f}; // nothing there (silence): no colour at all
     }
     if (value > max) {
         value = max;
@@ -152,7 +152,7 @@ struct AutoRange {
             span = 10.f;
         }
         // don't chase silence or a quiet noise floor all the way down: it should stay dark
-        const float top = peak > -100.f ? peak : -100.f;
+        const float top = peak > -80.f ? peak : -80.f;
         // steady levels sit in the greens and yellows, anything above the recent peak
         // goes red, and white 12 dB above it
         max = static_cast<int>(top + 12.f);

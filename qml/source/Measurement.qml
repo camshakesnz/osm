@@ -71,7 +71,7 @@ Item {
         radius: 4
         color: Qt.rgba(base.r, base.g, base.b, measurement.highlight ? 0.07 : 0.03)
         border.width: measurement.highlight ? 2 : 1
-        border.color: dataModelData && dataModelData.active ?
+        border.color: dataModelData && dataModelData.active && !dataModelData.chartHidden ?
                           Qt.rgba(sourceColor.r, sourceColor.g, sourceColor.b, 0.85) :
                           Qt.rgba(base.r, base.g, base.b, 0.18)
     }
@@ -106,7 +106,7 @@ Item {
 
             Label {
                 Layout.fillWidth: true
-                Layout.rightMargin: chirpLabel.visible ? 4 : 74 // clear of the gear / delete buttons
+                Layout.rightMargin: 4 // clear of the gear / delete buttons
                 font.bold: true
                 elide: Text.ElideRight
                 text: (dataModelData ? dataModelData.name : "")
@@ -115,11 +115,28 @@ Item {
             // chirp progress, e.g. "chirp 2/3"
             Label {
                 id: chirpLabel
-                Layout.rightMargin: 74
+                Layout.rightMargin: 4
                 font.pixelSize: 10
                 opacity: 0.75
                 visible: dataModelData && dataModelData.chirpMode === true && text.length > 0
                 text: dataModelData && dataModelData.chirpStatus ? dataModelData.chirpStatus : ""
+            }
+
+            // drawn on the charts, or only running (meters, loudness)
+            MiniButton {
+                id: chartsToggle
+                Layout.rightMargin: 74 // clear of the gear / clone / delete buttons
+                Layout.preferredWidth: 22
+                Layout.preferredHeight: 18
+                readonly property bool shown: dataModelData && !dataModelData.chartHidden
+                text: shown ? "\u25C9" : "\u25CC"
+                font.pixelSize: 11
+                opacity: shown ? 0.55 : 1
+                checked: !shown
+                checkedColor: Material.color(Material.Orange)
+                tooltip: shown ? qsTr("shown on the charts: click to keep it off the charts (it still runs for meters and loudness)")
+                               : qsTr("not on the charts (still running for meters and loudness): click to show it")
+                onClicked: if (dataModelData) dataModelData.chartHidden = !dataModelData.chartHidden
             }
         }
 

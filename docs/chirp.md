@@ -227,3 +227,12 @@ The spectrograph's **auto** levels (on by default, in its ⚙ settings) follow t
 levels sit in the greens, anything louder than the recent peak goes red, white for 12 dB over,
 and nothing (black) more than the *range* below the peak. A quiet room or silence stays dark.
 Untick *auto* to use fixed min/mid/max levels.
+
+# Measurements kept off the charts
+
+Each measurement block has a small **◉** button next to its name. Click it (it turns orange, **◌**)
+to keep that measurement off every chart while it keeps running, for example the stream feed
+that only the **Loudness** chart and SPL meters should use. Its meters, the Loudness chart and
+numeric meters that pick it still work; spectrum, magnitude, phase, impulse, spectrograph and so
+on (in every view and pop-out window) ignore it. *Capture All* and the Spatial Avg captures skip
+it too. Click again to bring it back. The setting is saved with the session.

@@ -116,7 +116,7 @@ ApplicationWindow {
         }
         for (var i = 0; i < sourceList.count; i++) {
             var m = sourceList.get(i).data;
-            if (m && m.active && m.objectName === "Measurement") {
+            if (m && m.active && !m.chartHidden && m.objectName === "Measurement") {
                 storeMeasurement(m);
                 return;
             }
@@ -151,7 +151,8 @@ ApplicationWindow {
     function captureAll() {
         for (var i = 0; i < sourceList.count; i++) {
             let source = sourceList.get(i).data;
-            if (source && source.active && source.objectName === "Measurement") {
+            // measurements kept off the charts (e.g. a stream feed) aren't captured
+            if (source && source.active && !source.chartHidden && source.objectName === "Measurement") {
                 storeMeasurement(source);
             }
         }

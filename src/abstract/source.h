@@ -40,6 +40,8 @@ class Source : public QObject, public Data
     Q_PROPERTY(QColor   color      READ color      WRITE setColor      NOTIFY colorChanged)
     Q_PROPERTY(bool     active     READ active     WRITE setActive     NOTIFY activeChanged)
     Q_PROPERTY(unsigned sampleRate READ sampleRate WRITE setSampleRate NOTIFY sampleRateChanged)
+    //! keep running (meters, loudness) but don't draw it on the charts
+    Q_PROPERTY(bool     chartHidden READ chartHidden WRITE setChartHidden NOTIFY chartHiddenChanged)
 
     Q_PROPERTY(QUuid    uuid       READ uuid       CONSTANT)
     Q_PROPERTY(bool     cloneable  READ cloneable  CONSTANT)
@@ -75,6 +77,9 @@ public:
 
     virtual bool     cloneable() const;
 
+    bool             chartHidden() const;
+    void             setChartHidden(bool hidden);
+
 public slots:
     void    setGlobalColor(int globalValue);
 
@@ -84,6 +89,7 @@ signals:
     void    nameChanged(QString);
     void    colorChanged(QColor);
     void    sampleRateChanged(unsigned int);
+    void    chartHiddenChanged(bool);
     void    beforeDestroy(Source *);   //TODO: delete
 
 private:
@@ -93,6 +99,7 @@ private:
     std::atomic<unsigned>   m_sampleRate;
     std::atomic<bool>       m_active;
     bool                    m_cloneable;
+    bool                    m_chartHidden = false;
 };
 
 } // namespace Abstract

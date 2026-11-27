@@ -51,6 +51,7 @@ QJsonObject Source::toJSON() const noexcept
     object["active"]    = active();
     object["name"]      = name();
     object["sampleRate"] = static_cast<int>(sampleRate());
+    object["chartHidden"] = chartHidden();
 
     auto m_color = color();
     QJsonObject jscolor;
@@ -72,6 +73,7 @@ void Source::fromJSON(QJsonObject data, const SourceList *) noexcept
     setActive(    data["active"].toBool(active()));
     setName(      data["name"].toString());
     setSampleRate(data["sampleRate"].toInt(       sampleRate()));
+    setChartHidden(data["chartHidden"].toBool(false));
 
     auto jsonColor = data["color"].toObject();
     QColor c(
@@ -187,6 +189,23 @@ void Source::setGlobalColor(int globalValue)
 {
     if (globalValue < 19) {
         setColor(Qt::GlobalColor(globalValue));
+    }
+}
+
+} // namespace Abstract
+
+namespace Abstract {
+
+bool Source::chartHidden() const
+{
+    return m_chartHidden;
+}
+
+void Source::setChartHidden(bool hidden)
+{
+    if (m_chartHidden != hidden) {
+        m_chartHidden = hidden;
+        emit chartHiddenChanged(m_chartHidden);
     }
 }
 
