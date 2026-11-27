@@ -107,6 +107,7 @@ jobs:
     runs-on: macos-15
     strategy:
       fail-fast: false
+      max-parallel: 1 # Apple Silicon runners are scarce; one at a time queues better
       matrix:
         include:
           # OpenGL: Qt 5's mature scene graph renderer, the same one Windows and the
