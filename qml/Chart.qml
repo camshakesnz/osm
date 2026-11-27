@@ -32,6 +32,11 @@ Item {
     property string settingsGroup: ""
     //! charts in the main window can be popped out into their own window
     property bool canPopOut: true
+    //! the mouse is over this chart (its corner buttons are showing)
+    readonly property bool mouseOver: chartHover.hovered || opener.containsMouse ||
+                                      settingsButton.hovered || popOutButton.hovered || smoothingButton.hovered ||
+                                      (splGrid.visible && splGrid.hovered) ||
+                                      (loudnessLoader.item ? loudnessLoader.item.hovered === true : false)
 
     VariableChart {
         id: chart
@@ -382,6 +387,7 @@ Item {
     }
 
     SPL.Grid {
+        id: splGrid
         enabled: chart.type == "Numeric"
         visible: chart.type == "Numeric"
 
@@ -397,6 +403,11 @@ Item {
         sourceComponent: Loudness.LoudnessView {
             settings: chartview.settings
         }
+    }
+
+    //! the corner buttons (settings, pop-out) only show while the mouse is over this chart
+    HoverHandler {
+        id: chartHover
     }
 
     //! open this chart's settings (the gear in the bottom right corner)
@@ -424,7 +435,8 @@ Item {
         flat: true
         text: "\u2699"
         font.pixelSize: 14
-        opacity: hovered ? 1 : 0.45
+        opacity: chartview.mouseOver ? (hovered ? 1 : 0.6) : 0
+        Behavior on opacity { NumberAnimation { duration: 150 } }
         onClicked: chartview.openSettings()
         ToolTip.visible: hovered
         ToolTip.text: qsTr("chart settings")
@@ -495,7 +507,8 @@ Item {
         flat: true
         text: "\u2197"
         font.pixelSize: 13
-        opacity: hovered ? 1 : 0.45
+        opacity: chartview.mouseOver ? (hovered ? 1 : 0.6) : 0
+        Behavior on opacity { NumberAnimation { duration: 150 } }
         onClicked: applicationWindow.popOut(chart.type, chartview.settingsGroup)
         ToolTip.visible: hovered
         ToolTip.text: qsTr("open this chart in its own window (e.g. meters on a second display)")

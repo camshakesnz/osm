@@ -146,9 +146,13 @@ Item {
     PropertiesOpener {
         id: opener
         pushObject: view
+        hoverEnabled: true
         propertiesQml: "qrc:/Loudness/LoudnessProperties.qml"
         onClicked: applicationWindow.properiesbar.follow(view, propertiesQml, qsTr("Loudness"))
     }
+
+    //! the mouse is over the view (the chart's corner buttons show on hover)
+    readonly property bool hovered: opener.containsMouse
 
     //! the chart's gear button
     function openSettings() {

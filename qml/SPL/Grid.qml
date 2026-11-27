@@ -25,6 +25,8 @@ import OpenSoundMeterModule 1.0
 Item {
     id: control
     property alias settings: model.settings
+    //! the mouse is over one of the meters
+    readonly property bool hovered: view.hoverCount > 0
     anchors.fill: parent
 
     TableView{
@@ -34,6 +36,7 @@ Item {
         rowSpacing: 2
         clip: false
         reuseItems: true
+        property int hoverCount: 0
 
         property int cellWidth:  Math.floor(width  / columns)  - columnSpacing
         property int cellHeight: Math.floor(height / rows)     - rowSpacing

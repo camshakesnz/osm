@@ -102,7 +102,9 @@ Window {
         flat: true
         text: popout.visibility === Window.FullScreen ? "↙" : "⤢"
         font.pixelSize: 15
-        opacity: hovered ? 1 : 0.45
+        // only while the mouse is over the window
+        opacity: chart.mouseOver || hovered ? (hovered ? 1 : 0.6) : 0
+        Behavior on opacity { NumberAnimation { duration: 150 } }
         onClicked: popout.toggleFullScreen()
         ToolTip.visible: hovered
         ToolTip.text: qsTr("full screen (F11, Esc to leave)")

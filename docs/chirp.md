@@ -70,11 +70,11 @@ Code: `src/math/chirpsignal.h` (shared stimulus definition), `src/math/chirpanal
 Any chart can be opened in its own window, for example the **numeric meters on a
 second display** while the main window keeps the graphs.
 
-- Click **↗** in the bottom left corner of a chart (next to its ⚙) to open that chart in a new window, with the
+- Hover over a chart and click **↗** in its bottom left corner (next to its ⚙) to open that chart in a new window, with the
   same settings (for Numeric: the same meter layout and sources).
   Or **View → New window (meters)** (Ctrl+Shift+M) opens a fresh Numeric window.
 - A new window opens on another display if there is one.
-- The **⤢** button in the bottom right corner (or F11) toggles full screen; Esc leaves full screen.
+- The **⤢** button in the bottom right corner (shown while the mouse is over the window), or F11, toggles full screen; Esc leaves full screen.
 - The chart type and its settings can be changed inside the window as normal; clicking
   a meter opens its settings, and a chart's ⚙ opens its settings, in the main window.
 - Open windows, with their size, position, full screen state and settings, come back on
@@ -129,7 +129,7 @@ The window is laid out in the style of Smaart:
   The signal generator block sits at the bottom: type, On/Off (Ctrl+G) and level − / +
   (Shift: 6 dB steps).
 - **Settings** open in a floating window from the **⚙** buttons (each measurement, the generator,
-  each chart's bottom-left corner, folders). Drag it by its title bar; Esc or ✕ closes it. While
+  each chart's bottom-left corner, folders). A chart's ⚙ and ↗ only appear while the mouse is over that chart. Drag it by its title bar; Esc or ✕ closes it. While
   it is open, clicking another chart or measurement switches it to that item. *Dock* puts the
   settings back along the bottom of the window permanently (*Float* undoes it).
 

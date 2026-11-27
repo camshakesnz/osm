@@ -76,6 +76,9 @@ Rectangle {
     Root.PropertiesOpener {
        propertiesQml: "qrc:/SPL/MeterProperties.qml"
        cursorShape: Qt.PointingHandCursor
+       hoverEnabled: true
+       // let the chart know the mouse is over it (its corner buttons show on hover)
+       onContainsMouseChanged: if (gridRef) gridRef.hoverCount = Math.max(0, gridRef.hoverCount + (containsMouse ? 1 : -1))
        pushObject: {"meter": control.dataSource, "grid": gridRef}
        onClicked: {
            open();
