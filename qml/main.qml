@@ -568,6 +568,11 @@ ApplicationWindow {
     //Properties area: in the floating settings window, or docked along the bottom
     PropetiesBar {
         id: bottomtab
+        // set explicitly: docked, it sits under the Controls 1 window and would not pick
+        // up the dark theme (white dropdowns, invisible labels)
+        Material.theme: applicationAppearance.darkMode ? Material.Dark : Material.Light
+        Material.background: applicationAppearance.darkMode ? "#161618" : "#FAFAFA"
+        Material.accent: Material.Indigo
         readonly property Flickable host: applicationWindow.settingsDocked ? dockBody : floatBody
         parent: host.contentItem
         // the settings rows are laid out for a wide panel: never squeeze them,

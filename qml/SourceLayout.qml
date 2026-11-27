@@ -273,11 +273,13 @@ ListView {
                     anchors.right: cloneButton.visible ? cloneButton.left : spacer.left
                     anchors.top: parent.top
                     flat: true
-                    font.pixelSize: 15
+                    font.pixelSize: 21
                     rightPadding: 4
                     leftPadding: 4
+                    topPadding: 0
+                    bottomPadding: 2
                     visible: loaded.status == Loader.Ready && loaded.item && loaded.item.propertiesQml ? true : false
-                    opacity: hovered ? 1 : 0.7
+                    opacity: hovered ? 1 : 0.8
                     onClicked: dragArea.openSettings()
                     background: Rectangle {
                         color: "transparent"

@@ -277,24 +277,33 @@ Item {
                 chart.plot.resetAxis();
             }
 
+            // scrolling pans the chart. A trackpad (macOS) sends many small pixel steps:
+            // follow them directly so it moves smoothly instead of jumping only when a
+            // fast swipe happens to cross the mouse-wheel threshold. A mouse wheel moves
+            // 15 px per notch, as before.
+            property point wheelRest: Qt.point(0, 0)
             onWheel: function (e) {
-
-                if (e.modifiers === Qt.NoModifier) {
-
-                    let d = Math.max(Math.abs(e.angleDelta.x), Math.abs(e.angleDelta.y));
-
-                    if (d >= 120) {
-                        let base = Qt.point(e.x, e.y);
-                        let move = Qt.point(0.0, 0.0);
-                        let scale = Qt.point(1.0, 1.0);
-                        move = Qt.point(e.angleDelta.x / 8, e.angleDelta.y / 8);
-
-                        chart.plot.beginGesture();
-                        chart.plot.applyGesture(base, move, scale);
-
-                        e.accepted = true;
-                    }
+                e.accepted = true;
+                if (e.modifiers !== Qt.NoModifier || !chart.plot) {
+                    return;
                 }
+                let move;
+                if (e.pixelDelta.x !== 0 || e.pixelDelta.y !== 0) {
+                    move = Qt.point(e.pixelDelta.x, e.pixelDelta.y);
+                } else {
+                    // collect partial notches (high resolution wheels)
+                    let x = wheelRest.x + e.angleDelta.x;
+                    let y = wheelRest.y + e.angleDelta.y;
+                    let notchesX = Math.trunc(x / 120);
+                    let notchesY = Math.trunc(y / 120);
+                    wheelRest = Qt.point(x - notchesX * 120, y - notchesY * 120);
+                    move = Qt.point(notchesX * 15, notchesY * 15);
+                }
+                if (move.x === 0 && move.y === 0) {
+                    return;
+                }
+                chart.plot.beginGesture();
+                chart.plot.applyGesture(Qt.point(e.x, e.y), move, Qt.point(1.0, 1.0));
             }
 
             function openCalculator() {
@@ -525,6 +534,10 @@ Item {
         implicitWidth: 145
         implicitHeight: Material.buttonHeight
         background: null
+        // over the SPL meters it would cover the third meter's title: show it on hover
+        readonly property bool hideUntilHover: chart.type == "Numeric"
+        opacity: !hideUntilHover || chartview.mouseOver || hovered || popup.visible ? 1 : 0
+        Behavior on opacity { NumberAnimation { duration: 150 } }
         model: applicationAppearance.experimentFunctions ?
                    ["Spectrum", "Magnitude", "Phase", "Impulse", "Step", "Coherence", "Group Delay", "Phase Delay", "Spectrogram", "Level", "Numeric", "Loudness", "Crest Factor", "Nyquist"] :
                    ["Spectrum", "Magnitude", "Phase", "Impulse", "Step", "Coherence", "Group Delay", "Spectrogram", "Level", "Numeric", "Loudness"]
