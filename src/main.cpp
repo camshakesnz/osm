@@ -61,6 +61,9 @@ int main(int argc, char *argv[])
 
 #ifdef GRAPH_METAL
     QQuickWindow::setSceneGraphBackend(Chart::SeriesNode::chooseRhi());
+    // the default (distance field) text on Qt 5.15's Metal backend can drop labels
+    // until something redraws them; native glyphs avoid that and look crisper on macOS
+    QQuickWindow::setTextRenderType(QQuickWindow::NativeTextRendering);
 #elif defined(GRAPH_OPENGL)
     QQuickWindow::setSceneGraphBackend(QSGRendererInterface::OpenGL);
     QCoreApplication::setAttribute(Qt::AA_UseDesktopOpenGL);

@@ -271,13 +271,18 @@ ListView {
                     id: settingsButton
                     text: "\u2699"
                     anchors.right: cloneButton.visible ? cloneButton.left : spacer.left
-                    anchors.top: parent.top
+                    // centred on the name row (3 px margin + 30 px row in the blocks)
+                    anchors.verticalCenter: parent.top
+                    anchors.verticalCenterOffset: 21
+                    height: 30
+                    topInset: 0
+                    bottomInset: 0
                     flat: true
                     font.pixelSize: 21
                     rightPadding: 4
                     leftPadding: 4
                     topPadding: 0
-                    bottomPadding: 2
+                    bottomPadding: 0
                     visible: loaded.status == Loader.Ready && loaded.item && loaded.item.propertiesQml ? true : false
                     opacity: hovered ? 1 : 0.8
                     onClicked: dragArea.openSettings()
@@ -294,7 +299,14 @@ ListView {
                     font.family: "Osm"
                     text: "\uf24d"
                     anchors.right: spacer.left
-                    anchors.top: parent.top
+                    // centred on the name row, like the gear
+                    anchors.verticalCenter: parent.top
+                    anchors.verticalCenterOffset: 21
+                    height: 30
+                    topInset: 0
+                    bottomInset: 0
+                    topPadding: 0
+                    bottomPadding: 0
                     flat: true
                     font.pixelSize: 14
                     rightPadding: 4
@@ -326,7 +338,14 @@ ListView {
                     text: "\ue801"
                     anchors.right: parent.right
                     opacity: dragArea.containsMouse || hovered ? 1 : 0
-                    anchors.top: parent.top
+                    // centred on the name row, like the gear
+                    anchors.verticalCenter: parent.top
+                    anchors.verticalCenterOffset: 21
+                    height: 30
+                    topInset: 0
+                    bottomInset: 0
+                    topPadding: 0
+                    bottomPadding: 0
                     flat: true
                     font.pixelSize: 14
                     rightPadding: 4
